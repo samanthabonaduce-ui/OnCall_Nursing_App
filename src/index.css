@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  .markdown-body {
+    @apply space-y-4;
+  }
+  .markdown-body p {
+    @apply leading-relaxed;
+  }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    @apply font-serif italic font-bold mt-6 mb-2;
+  }
+  .markdown-body h1 { @apply text-xl; }
+  .markdown-body h2 { @apply text-lg; }
+  .markdown-body h3 { @apply text-base; }
+  .markdown-body ul {
+    @apply list-disc list-inside space-y-1 ml-2;
+  }
+  .markdown-body ol {
+    @apply list-decimal list-inside space-y-1 ml-2;
+  }
+  .markdown-body code {
+    @apply bg-[#141414]/5 px-1.5 py-0.5 rounded font-mono text-[0.9em];
+  }
+  .markdown-body blockquote {
+    @apply border-l-2 border-[#141414]/20 pl-4 italic text-[#141414]/70;
+  }
+  .markdown-body strong {
+    @apply font-bold;
+  }
+  .question-font {
+    @apply font-sans leading-relaxed text-sm;
+  }
+}
