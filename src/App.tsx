@@ -37,7 +37,7 @@ import {
   Edit2,
   Check
 } from "lucide-react";
-
+import { motion, AnimatePresence } from "framer-motion";
 import Markdown from "react-markdown";
 
 import { cn } from "./lib/utils";
@@ -588,7 +588,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#F5F5F0] text-[#141414] font-sans overflow-hidden">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col h-screen bg-[#F5F5F0] text-[#141414] font-sans overflow-hidden"
+    >
       {/* Pinned Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-[#141414]/10 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
@@ -1237,26 +1241,31 @@ export default function App() {
                           </div>
                           {expandedOption === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </button>
-                        {expandedOption === idx && (
-                          <div
-                            className="bg-[#F5F5F0] border-x border-b border-[#141414]/5 rounded-b-2xl -mt-2 pt-4 p-4"
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              {opt.isCorrect ? (
-                                <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
-                                  <CheckCircle2 className="w-3 h-3" /> Correct
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
-                                  <AlertCircle className="w-3 h-3" /> Incorrect
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-[#141414]/70 leading-relaxed italic">
-                              {opt.rationale}
-                            </p>
-                          </div>
-                        )}
+                        <AnimatePresence>
+                          {expandedOption === idx && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="bg-[#F5F5F0] border-x border-b border-[#141414]/5 rounded-b-2xl -mt-2 pt-4 p-4"
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                {opt.isCorrect ? (
+                                  <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
+                                    <CheckCircle2 className="w-3 h-3" /> Correct
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
+                                    <AlertCircle className="w-3 h-3" /> Incorrect
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-[#141414]/70 leading-relaxed italic">
+                                {opt.rationale}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     ))}
                   </div>
@@ -1290,9 +1299,13 @@ export default function App() {
       )}
 
       {/* Calculator Modal */}
+      <AnimatePresence>
         {showCalculator && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-            <div 
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="bg-[#141414] text-white w-64 rounded-3xl shadow-2xl overflow-hidden border border-white/10"
             >
               <div className="p-4 flex items-center justify-between border-b border-white/5">
@@ -1341,9 +1354,10 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
       {/* Auth Overlay */}
       {authMode && (
@@ -1478,9 +1492,13 @@ export default function App() {
       )}
 
       {/* Account Settings Modal */}
+      <AnimatePresence>
         {showAccountSettings && state.user && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[210] flex items-center justify-center p-6">
-            <div 
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white w-full max-w-md rounded-3xl border border-[#141414]/10 shadow-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-[#141414]/5 flex items-center justify-between bg-[#F5F5F0]/50">
@@ -1580,10 +1598,11 @@ export default function App() {
                   Done
                 </button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
-    </div>
-  </div>
+      </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
