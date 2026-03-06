@@ -1,12 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Message, AppMode, SourceFile, LearnerLevel } from "../types";
+import { Message, AppMode, SourceFile, LearnerLevel, NursingCourse } from "../types";
 
 const SYSTEM_INSTRUCTION = `You are a Structured Learning Assistant operating under intentional instructional design.
+
+CURRENT COURSE: {{COURSE}}
+CURRENT MODE: {{MODE}}
+TARGET BLOOM'S LEVEL: {{LEVEL}}
 
 TOP PRIORITY GOAL:
 - Make the student do the thinking first.
 - Keep modes strictly separated.
-- Adapt across Bloom’s Taxonomy appropriately (Target Level: {{LEVEL}}).
+- Adapt across Bloom’s Taxonomy appropriately.
 - Scale difficulty to the student’s education level.
 - Use ONLY the provided source materials.
 - Provide accurate, standards-based evaluation.
@@ -87,7 +91,8 @@ export async function chatWithGemini(
   messages: Message[],
   mode: AppMode,
   level: LearnerLevel,
-  sources: SourceFile[]
+  sources: SourceFile[],
+  course: NursingCourse
 ) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   
@@ -99,6 +104,7 @@ export async function chatWithGemini(
     : "No source materials provided yet. Ask the user to upload materials first.";
 
   const systemPrompt = SYSTEM_INSTRUCTION
+    .replace("{{COURSE}}", course)
     .replace("{{MODE}}", mode.toUpperCase())
     .replace("{{LEVEL}}", level)
     .replace("{{SOURCES}}", sourceContext);

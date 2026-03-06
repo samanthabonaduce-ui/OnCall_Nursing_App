@@ -8,20 +8,23 @@ export type AppMode = "Learn/Study" | "Drill/Quiz" | "Evaluate/Exam" | "Simulati
 
 export type LearnerLevel = "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
 
-export type Module = 
-  | "Module 1 - Cardiac Part 1"
-  | "Module 1 - Cardiac Part 2"
-  | "Module 2 - Diabetes"
-  | "Module 3 - Respiratory"
-  | "Module 4 - Cancer"
-  | "Comprehensive Final Exam";
+export type NursingCourse = 
+  | "Pharmacology for Nursing 2"
+  | "Mental Health Nursing"
+  | "LPN to ADN Transition"
+  | "Paramedic to ADN Transition"
+  | "Nursing 2"
+  | "Nursing 3";
+
+export type Module = string;
 
 export type SourceFile = {
   id: string;
   name: string;
   content: string;
   isEmbedded?: boolean;
-  moduleId?: Module;
+  moduleId?: string;
+  courseId?: NursingCourse;
 };
 
 export type PopUpType = "Bedside Quiz" | "MAR Check" | "Stat Page" | null;
@@ -66,10 +69,11 @@ export type User = {
 
 export type SessionState = {
   user: User | null;
+  course: NursingCourse;
   messages: Message[];
   mode: AppMode;
   level: LearnerLevel;
-  module: Module;
+  module: string;
   sources: SourceFile[];
   isThinking: boolean;
   sessionEnded: boolean;

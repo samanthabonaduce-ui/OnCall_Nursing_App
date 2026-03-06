@@ -6,6 +6,7 @@ export const DEFAULT_SOURCES: SourceFile[] = [
     name: "Chapter 53: Diabetes Mellitus",
     isEmbedded: true,
     moduleId: "Module 2 - Diabetes",
+    courseId: "Nursing 2",
     content: `Chapter 53: Diabetes (DM)
 A chronic multisystem disease characterized by hyperglycemia related to abnormal insulin production, impaired insulin use, or both.
 Affects estimated 34.2 million people in United States. 88 million have prediabetes. 17.3 million unaware. 7th leading cause of death.
@@ -42,6 +43,7 @@ Type 2: Nonspecific symptoms (fatigue, recurrent infections, prolonged wound hea
     name: "Reference: DM Overview",
     isEmbedded: true,
     moduleId: "Module 2 - Diabetes",
+    courseId: "Nursing 2",
     content: `DIABETES MELLITUS OVERVIEW
 DM Type I: Autoimmune disorder, Genetic link, Idiopathic, Latent autoimmune in adults. Treatment: Insulin Therapy, Lifestyle (Diet, Exercise, Monitoring).
 DM Type II: Genetic link, Insulin resistance, decreased insulin production, Inappropriate hepatic glucose production. Treatment: Oral Anti-Diabetic Therapy, Insulin if necessary, Lifestyle.
@@ -69,6 +71,7 @@ Enables decisions for diet/exercise/meds. Frequency varies: Before meals, Hyper/
     name: "Reference: DM Acute Complications",
     isEmbedded: true,
     moduleId: "Module 2 - Diabetes",
+    courseId: "Nursing 2",
     content: `DM ACUTE COMPLICATIONS
 Hypoglycemia: Glucose < 70 mg/dL. 
 - Symptoms: Shakiness, Palpitations, Nervousness, Diaphoresis, Difficulty speaking/seeing, Confusion, Seizures/Coma.
@@ -90,6 +93,7 @@ Regular insulin ONLY. Glucose monitoring Q1H. Initiate Dextrose IV when glucose 
     name: "Reference: DM Chronic Complications",
     isEmbedded: true,
     moduleId: "Module 2 - Diabetes",
+    courseId: "Nursing 2",
     content: `DM CHRONIC COMPLICATIONS
 Causes: Damage to blood vessels secondary to Chronic Hyperglycemia & HTN. No ability to truly reverse damage.
 
@@ -115,6 +119,7 @@ Annual Prevention: Annual Eye Exams, A1C & Annual blood work.`
     name: "Reference: DM Drug Therapy",
     isEmbedded: true,
     moduleId: "Module 2 - Diabetes",
+    courseId: "Nursing 2",
     content: `DM DRUG THERAPY
 Insulin Types:
 - Rapid-acting (Aspart/Novolog, Lispro/Humalog): Eat within 10-15 mins. Peak/Crash around 3 hours.
@@ -137,6 +142,7 @@ High Risk Meds: Insulin requires 2 nurse verification. IV insulin MUST be on a p
     name: "Reference: RAAS, ACE & ARB",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `RENIN-ANGIOTENSIN-ALDOSTERONE SYSTEM (RAAS)
 RAAS kicks in when the body senses low blood pressure. The kidneys are directed to secrete renin & start one of the many feedback mechanisms to low BP. Baroreceptors in the aortic arch & carotid sinuses sense the reduced stretch (low BP) & the kidneys sense reduced renal perfusion.
 
@@ -157,6 +163,7 @@ CAUTION: Cannot be combined with potassium-sparing diuretics or other ACEs or AR
     name: "Reference: Antidysrhythmics",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `ANTIDYSRHYTHMICS: ACTION POTENTIAL & CLASSIFICATION
 CLASS I: NA+ CHANNEL BLOCKERS
 - 1A: Slow conduction, prolongs repolarization. Meds: Quinidine, Procainamide.
@@ -182,6 +189,7 @@ MONITOR: Watch for Prolonged QT Intervals. Do Not take with meds that also cause
     name: "Reference: Natriuretic Peptides & ARNI",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `NATRIURETIC PEPTIDES & ARNI
 NATRIURETIC PEPTIDES (ANP & BNP): Compensatory hormones released by the atria & left ventricle during increased workload of the heart. Effects: Natriuresis, Diuresis, Vasodilation.
 
@@ -199,6 +207,7 @@ CAUTION: Long-term Tx of Heart Failure. Cannot be given with an ACE or ARB.`
     name: "Reference: Autonomic NS Agents",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `AUTONOMIC NS AGENTS: BETA'S & ALPHA'S
 SYMPATHETIC NERVOUS SYSTEM (SNS): Responsible for maintaining vascular tone & pacing SA node & inhibiting vagal tone (heart rate). "Fight or Flight" Response.
 
@@ -217,6 +226,7 @@ CAUTION: Monitor vitals - BP & HR. Do not abruptly stop taking beta blockers.`
     name: "Reference: Blood Pressure 101",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `BLOOD PRESSURE 101: BP = CO x SVR
 Cardiac Output (CO) = Heart Rate (HR) x Stroke Volume (SV).
 Systemic Vascular Resistance (SVR) = Force opposing the movement of blood within blood vessels.
@@ -236,6 +246,7 @@ FACTORS AFFECTING CO:
     name: "Reference: Diuretic Therapy",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `DIURETIC THERAPY
 Goal: Maintain normal BP & fluid balance. Remember: 1L Fluid = 1kg (2.2 lbs).
 
@@ -256,6 +267,7 @@ RENIN INHIBITOR: Aliskiren (Tekturna). Directly inhibits renin, reducing RAAS ef
     name: "Reference: Direct Vasodilators & Nitrates",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `DIRECT VASODILATORS & THE NITRATE FAMILY
 DIRECT VASODILATORS:
 Medication: Hydralazine (Apresoline). Action: Binds to arterial smooth muscle causing vasodilation. Side Effects: rebound tachycardia, orthostatic hypotension.
@@ -274,6 +286,7 @@ Long-acting nitrates: Isosorbide mononitrate (Imdur), Isosorbide Dinitrate (Isor
     name: "Reference: Cardiac Diagnostics",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `CARDIAC DIAGNOSTICS
 INDICATIONS: HTN, Dysrhythmias, Chest Pain, ACS, CAD, MI, CVD/PVD, Cardiomyopathy, Heart Failure.
 
@@ -296,6 +309,7 @@ INVASIVE TESTING: Hemodynamic Monitoring (NIBP, HR, SPO2, ABP, CVP, CV02, LVEDV)
     name: "Reference: Cardiac Rhythms",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `CARDIAC RHYTHMS: SINUS & ATRIAL
 SINUS RHYTHMS:
 - Normal Sinus Rhythm (NSR): 60-100 bpm.
@@ -318,6 +332,7 @@ RHYTHM MEASURING:
     name: "Reference: Calcium Channel Blockers",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `CALCIUM CHANNEL BLOCKERS (CCB)
 Calcium is needed for muscle contraction. CCBs inhibit movement of Ca+ across cell membranes.
 
@@ -338,6 +353,7 @@ MONITOR: Vitals - BP & HR, Rhythm.`
     name: "Reference: Drugs Affecting Blood Clotting",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `DRUGS AFFECTING BLOOD CLOTTING
 ANTICOAGULANT THERAPY:
 - Vitamin K Antagonist: Warfarin (Coumadin). Monitor INR (2-3 for A-fib, 2.5-3.5 for Valve).
@@ -359,6 +375,7 @@ SIDE EFFECTS: Bleeding. Teach soft bristle toothbrush, electric razors, avoid NS
     name: "Reference: Hypertension",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 1",
+    courseId: "Nursing 2",
     content: `HYPERTENSION (HTN)
 PRIMARY HTN (90-95%): BP without identified cause. Risk factors: Obesity, SNS activity, Na+ intake, Tobacco/ETOH.
 SECONDARY HTN: BP with a specific cause that can be corrected.
@@ -379,6 +396,7 @@ TREATMENT:
     name: "Reference: CAD & Lipid-Lowering Therapy",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `CORONARY ARTERY DISEASE (CAD) & LIPID-LOWERING DRUGS
 PATHOPHYSIOLOGY: Progressive disease developing over years. Endothelium lining damaged via HTN, tobacco, lipids, DM, toxins. Atherosclerosis: fatty deposits. Stages: (1) fatty streak, (2) fibrous plaque, (3) complicated lesion.
 
@@ -399,6 +417,7 @@ COMPLICATIONS: Chronic Stable Angina, ACS (Unstable Angina, MI).`
     name: "Reference: Angina & ACS",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `ANGINA & ACUTE CORONARY SYNDROME (ACS)
 CHEST PAIN = MYOCARDIAL ISCHEMIA: Occurs when O2 demand exceeds supply. Blockage >= 70% usually causes symptoms.
 
@@ -420,6 +439,7 @@ COMPLICATIONS: Heart Failure & Cardiogenic Shock.`
     name: "Reference: Myocardial Infarction (MI)",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `MYOCARDIAL INFARCTION (MI) - LOCALIZED DAMAGE
 CAUSES: Abrupt stoppage of blood flow through coronary artery. STEMI (Occlusive thrombus) vs NSTEMI (Nonocclusive thrombus).
 
@@ -443,6 +463,7 @@ COMPLICATIONS: Dysrhythmias (most common), Heart Failure, Cardiogenic Shock.`
     name: "Reference: Heart Failure",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `HEART FAILURE (HF)
 PATHOPHYSIOLOGY: Interference with CO. Neurohormonal compensatory mechanisms (SNS, RAAS) lead to remodeling & decreased function.
 PRIMARY CAUSES: HTN, CAD, Cardiomyopathy, MI, Valvular disorders.
@@ -467,6 +488,7 @@ TREATMENT:
     name: "Reference: Cardiomyopathy",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `CARDIOMYOPATHY (GLOBAL DAMAGE)
 Group of diseases affecting myocardial structure or function.
 - Dilated: Most common. Abnormal widening of LV. Genetic/toxins/HTN.
@@ -482,6 +504,7 @@ VENTRICULAR ASSISTIVE DEVICES (LVAD): Long-term support or bridge to transplant.
     name: "Reference: Inflammatory & Structural Heart Disorders",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `INFLAMMATORY & STRUCTURAL HEART DISORDERS
 VALVULAR HEART DISEASE:
 - Stenosis: Narrowing (Mitral, Aortic). Back-up of blood.
@@ -500,6 +523,7 @@ INFLAMMATORY DISORDERS:
     name: "Reference: PVD & PAD",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `PERIPHERAL VASCULAR DISEASE (PVD)
 PERIPHERAL ARTERIAL DISEASE (PAD):
 - Causes: Atherosclerosis. Risk factors: Tobacco, DM, HTN, High Cholesterol.
@@ -519,6 +543,7 @@ DEEP VEIN THROMBOSIS (DVT): Thrombus formation. Risk of PE. Tx: Anticoagulants (
     name: "Reference: Positive Inotropes & Heart Properties",
     isEmbedded: true,
     moduleId: "Module 1 - Cardiac Part 2",
+    courseId: "Nursing 2",
     content: `POSITIVE INOTROPES & FUNDAMENTAL PROPERTIES
 POSITIVE INOTROPES: Increase contractility & CO.
 - Cardiac Glycoside: Digoxin. Action: Increase contractility, decrease HR. Watch for Digitalis Toxicity (Anorexia, NVD, Bradycardia, visual disturbances/halos).
@@ -536,6 +561,7 @@ POSITIVE INOTROPES: Increase contractility & CO.
     name: "Reference: Respiratory Diagnostics",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `RESPIRATORY DIAGNOSTICS
 UNDERSTANDING VENTILATION:
 - Inspiration (Inhalation): Movement of air into lungs.
@@ -557,6 +583,7 @@ DIAGNOSTIC TESTS:
     name: "Reference: Drugs Affecting Ventilation & Oxygenation",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `DRUGS AFFECTING VENTILATION & OXYGENATION
 OXYGEN ADMINISTRATION:
 - Low-flow: Nasal cannula, Simple mask, Non-rebreather.
@@ -581,6 +608,7 @@ DRUGS AFFECTING SECRETIONS:
     name: "Reference: Asthma",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `ASTHMA: PERSISTENT AIRWAY INFLAMMATION
 PATHOPHYSIOLOGY: Reversible airway obstruction caused by bronchoconstriction, hyperresponsiveness, & edema.
 TRIGGERS: Allergens, exercise, air pollutants, respiratory infections.
@@ -604,6 +632,7 @@ ASTHMA ACTION PLAN:
     name: "Reference: COPD",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `COPD: CHRONIC BRONCHITIS & EMPHYSEMA
 PATHOPHYSIOLOGY: Progressive, non-reversible airflow limitation.
 - Chronic Bronchitis: Sputum production for 3 months in 2 consecutive years.
@@ -622,6 +651,7 @@ LONG-TERM MANAGEMENT: SABA PRN, ICS/LABA combination, smoking cessation, vaccina
     name: "Reference: Respiratory Infections",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `RESPIRATORY INFECTIONS
 UPPER RESPIRATORY INFECTIONS: Nose, sinuses, throat (Strep, Flu, RSV).
 LOWER RESPIRATORY INFECTIONS: Bronchi & lungs (Pneumonia, TB).
@@ -644,6 +674,7 @@ SUPPORTIVE MEASURES: Breathing exercises (Pursed-lip, Diaphragmatic), Airway cle
     name: "Reference: Chest Trauma & Respiratory Cancers",
     isEmbedded: true,
     moduleId: "Module 3 - Respiratory",
+    courseId: "Nursing 2",
     content: `CHEST TRAUMA & RESPIRATORY CANCERS
 CHEST TRAUMA:
 - Fractured Ribs: Pain with inspiration. Risk of Atelectasis & Pneumonia.
@@ -665,6 +696,7 @@ CANCERS OF THE RESPIRATORY SYSTEM:
     name: "Reference: Cancer Basics & Development",
     isEmbedded: true,
     moduleId: "Module 4 - Cancer",
+    courseId: "Nursing 2",
     content: `CANCER BASICS & DEVELOPMENT
 WHAT IS CANCER?: Group of diseases characterized by uncontrolled & unregulated growth of cells. Cancer cells do not respect or follow the rules of proliferation (rate of growth) & differentiation (maturing to a functioning state).
 
@@ -688,6 +720,7 @@ TREATMENT GOALS:
     name: "Reference: Cancer Therapies & Complications",
     isEmbedded: true,
     moduleId: "Module 4 - Cancer",
+    courseId: "Nursing 2",
     content: `CANCER THERAPIES: RADIATION & CHEMOTHERAPY
 RADIATION THERAPY: Localized treatment resulting in cell death.
 - External (Teletherapy): Exposure from a machine. Marks placed on skin to outline field.
@@ -710,6 +743,7 @@ COMPLICATIONS:
     name: "Reference: Nursing Care for Cancer Patients",
     isEmbedded: true,
     moduleId: "Module 4 - Cancer",
+    courseId: "Nursing 2",
     content: `NURSING CARE FOR THE PATIENT WITH CANCER
 PREVENTING INFECTION: Hand hygiene, reverse isolation (mask), prophylactic antibiotics, Colony Stimulating Factors (Neupogen) for WBCs.
 
@@ -730,6 +764,7 @@ PALLIATIVE & END OF LIFE CARE:
     name: "Reference: Life Threatening Cancer Complications",
     isEmbedded: true,
     moduleId: "Module 4 - Cancer",
+    courseId: "Nursing 2",
     content: `LIFE THREATENING CANCER COMPLICATIONS
 HYPERCALCEMIA: Occurs with bone metastasis.
 - S/S: Fatigue, anorexia, N/V, constipation, muscle weakness, ECG changes.
@@ -748,6 +783,7 @@ TUMOR LYSIS SYNDROME (TLS): Large number of cancer cells dying releases intracel
     name: "Reference: Immune Enhancing Drug Therapy",
     isEmbedded: true,
     moduleId: "Module 4 - Cancer",
+    courseId: "Nursing 2",
     content: `IMMUNE ENHANCING DRUG THERAPY
 BIOLOGIC RESPONSE MODIFIERS: Class of drugs to enhance, direct, or restore the body's immune system.
 

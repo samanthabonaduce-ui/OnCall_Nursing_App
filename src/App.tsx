@@ -37,17 +37,15 @@ import {
   Edit2,
   Check
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+
 import Markdown from "react-markdown";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+
 import { cn } from "./lib/utils";
-import { Message, AppMode, SourceFile, SessionState } from "./types";
+import { Message, AppMode, SourceFile, SessionState, NursingCourse } from "./types";
 import { chatWithGemini, generateSessionReport, generatePopUpContent } from "./services/gemini";
 import { DEFAULT_SOURCES } from "./data/defaultSources";
 
-// Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+
 
 const PROFILE_ICONS = [
   { name: "Stethoscope", icon: Stethoscope },
@@ -82,9 +80,81 @@ const PROFILE_COLORS = [
   "#EC4899", // Pink
 ];
 
+const COURSES: NursingCourse[] = [
+  "Pharmacology for Nursing 2",
+  "Mental Health Nursing",
+  "LPN to ADN Transition",
+  "Paramedic to ADN Transition",
+  "Nursing 2",
+  "Nursing 3"
+];
+
+const COURSE_MODULES: Record<NursingCourse, string[]> = {
+  "Nursing 2": [
+    "Module 1 - Cardiac Part 1",
+    "Module 1 - Cardiac Part 2",
+    "Module 2 - Diabetes",
+    "Module 3 - Respiratory",
+    "Module 4 - Cancer",
+    "Comprehensive Final Exam"
+  ],
+  "Pharmacology for Nursing 2": [
+    "Module 1 - Endocrine Drug Therapy",
+    "Module 2 - Neuro/Neuromuscular Drug Therapy",
+    "Module 3 - Cardiovascular Drug Therapy",
+    "Module 4 - Respiratory/EENT Drug Therapy",
+    "Module 5 - Antibiotic Drug Therapy",
+    "Module 6 - Cancer Drug Therapy",
+    "Comprehensive Final Exam"
+  ],
+  "Mental Health Nursing": [
+    "Module 1 - Mental Health Nursing & MSA",
+    "Module 2 - Psychopharmacology & Psychotherapeutic Interventions",
+    "Module 3 - Neurocognitive, Somatic, Anxiety, & Stressor-Related Disorders",
+    "Module 4 - Depressive, Bipolar, & Personality Disorders",
+    "Module 5 - Schizophrenia Spectrum & Dissociative Disorders",
+    "Module 6 - Substance Use, Eating, & Gender Disorders",
+    "Comprehensive Final Exam"
+  ],
+  "LPN to ADN Transition": [
+    "Module 1 - Role Transition", 
+    "Module 2 - Advanced Assessment",
+    "Comprehensive Final Exam"
+  ],
+  "Paramedic to ADN Transition": [
+    "Module 1 - Clinical Reasoning", 
+    "Module 2 - Nursing Process",
+    "Comprehensive Final Exam"
+  ],
+  "Nursing 3": [
+    "Module 1 - Complex Cardiac", 
+    "Module 2 - Multi-System Failure",
+    "Comprehensive Final Exam"
+  ]
+};
+
+const MODULE_COLOR_SEQUENCE = [
+  "bg-[#F97316]", // Orange
+  "bg-[#EF4444]", // Red
+  "bg-[#A855F7]", // Purple
+  "bg-[#3B82F6]", // Blue
+  "bg-[#22C55E]", // Green
+  "bg-[#EC4899]", // Pink
+  "bg-[#06B6D4]", // Light Blue (Cyan)
+  "bg-[#F59E0B]", // Amber
+  "bg-[#6366F1]", // Indigo
+  "bg-[#8B5CF6]", // Violet
+];
+
+const getModuleColor = (moduleName: string, index: number) => {
+  if (moduleName === "Comprehensive Final Exam") return "bg-[#FEF019]"; // Yellow
+  return MODULE_COLOR_SEQUENCE[index % MODULE_COLOR_SEQUENCE.length];
+};
+
 export default function App() {
   const [state, setState] = useState<SessionState>({
     user: null,
+    course: "Nursing 2",
     messages: [],
     mode: "Learn/Study",
     level: "Analyze", // Defaulting to Analyze internally for NCLEX focus
@@ -160,9 +230,13 @@ export default function App() {
 
     const saved = localStorage.getItem("oncall_user");
     if (saved) {
-      const userData = JSON.parse(saved);
-      setState(prev => ({ ...prev, user: userData }));
-      setAuthMode(null);
+      try {
+        const userData = JSON.parse(saved);
+        setState(prev => ({ ...prev, user: userData }));
+        setAuthMode(null);
+      } catch (e) {
+        localStorage.removeItem("oncall_user");
+      }
     }
   }, []);
 
@@ -205,8 +279,8 @@ export default function App() {
           minutes: 30 
         }),
       });
-      alert("Congratulations! You've completed a 30-minute study session.");
-      setState(prev => ({ ...prev, sessionStartTime: Date.now(), progress: 0 })); // Reset for next session
+      console.log("Congratulations! You've completed a 30-minute study session.");
+      setState(prev => ({ ...prev, sessionStartTime: null, progress: 0 })); // Reset for next session
     } catch (e) {
       console.error("Session complete error", e);
     }
@@ -259,12 +333,12 @@ export default function App() {
       }
 
       const data = await res.json();
-      setState(prev => ({ ...prev, user: data, sessionStartTime: Date.now() }));
+      setState(prev => ({ ...prev, user: data, sessionStartTime: null }));
       localStorage.setItem("oncall_user", JSON.stringify(data));
       setAuthMode(null);
       fetchLeaderboard(leaderboardMode);
     } catch (e: any) {
-      alert(e.message);
+      console.error("Auth error", e.message);
     } finally {
       setIsAuthLoading(false);
     }
@@ -294,6 +368,8 @@ export default function App() {
     for (const file of Array.from(files)) {
       if (file.type === "application/pdf") {
         const arrayBuffer = await file.arrayBuffer();
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         let fullText = "";
         for (let i = 1; i <= pdf.numPages; i++) {
@@ -377,7 +453,7 @@ export default function App() {
       messages: newMessages,
       isThinking: true,
       sessionStarted: true,
-      sessionStartTime: prev.sessionStartTime || Date.now(),
+      sessionStartTime: prev.sessionStartTime,
     }));
     if (!overrideInput) setInput("");
 
@@ -387,7 +463,7 @@ export default function App() {
         !s.moduleId || s.moduleId === state.module || state.module === "Comprehensive Final Exam"
       );
       
-      const result = await chatWithGemini(newMessages, state.mode, state.level, moduleSources);
+      const result = await chatWithGemini(newMessages, state.mode, state.level, moduleSources, state.course);
       const newOutputCount = state.outputCount + 1;
 
       // Update stats on server (usage only, streak is now session-based)
@@ -524,10 +600,10 @@ export default function App() {
           </button>
           <div>
             <h1 className="text-xl md:text-2xl font-serif italic font-bold leading-tight">
-              OnCall: Nursing Study Guide
+              OnCall: Nursing Study Assistant
             </h1>
             <p className="text-[10px] md:text-[11px] text-[#141414]/40 font-medium uppercase tracking-widest mt-0.5">
-              The Personal Nursing 2 Learning Assistant
+              Study & Learn with your OnCall Assistant
             </p>
           </div>
         </div>
@@ -692,7 +768,37 @@ export default function App() {
               </section>
             )}
 
-            {/* Mode Selection */}
+            {/* Course Selection */}
+          <section>
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#141414]/40 mb-3">
+              Nursing Course
+            </h2>
+            <div className="relative">
+              <select
+                value={state.course}
+                onChange={(e) => {
+                  const newCourse = e.target.value as NursingCourse;
+                  const firstModule = COURSE_MODULES[newCourse][0];
+                  setState(prev => ({ 
+                    ...prev, 
+                    course: newCourse, 
+                    module: firstModule,
+                    sessionStartTime: null,
+                    progress: 0,
+                    messages: [] // Reset session on course change
+                  }));
+                }}
+                className="w-full bg-white border border-[#141414]/10 rounded-xl py-2.5 px-3 text-xs font-bold appearance-none focus:outline-none focus:ring-2 focus:ring-[#141414]/10"
+              >
+                {COURSES.map(course => (
+                  <option key={course} value={course}>{course}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#141414]/40 pointer-events-none" />
+            </div>
+          </section>
+
+          {/* Mode Selection */}
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#141414]/40 mb-3">
               Learning Mode
@@ -732,26 +838,19 @@ export default function App() {
               Course Modules
             </h2>
             <div className="space-y-1.5">
-              {(["Module 1 - Cardiac Part 1", "Module 1 - Cardiac Part 2", "Module 2 - Diabetes", "Module 3 - Respiratory", "Module 4 - Cancer", "Comprehensive Final Exam"] as const).map((mod) => {
-                const moduleColors: Record<string, string> = {
-                  "Module 1 - Cardiac Part 1": "bg-[#F97316]",
-                  "Module 1 - Cardiac Part 2": "bg-[#EF4444]",
-                  "Module 2 - Diabetes": "bg-[#A855F7]",
-                  "Module 3 - Respiratory": "bg-[#3B82F6]",
-                  "Module 4 - Cancer": "bg-[#22C55E]",
-                  "Comprehensive Final Exam": "bg-[#FEF019]"
-                };
+              {COURSE_MODULES[state.course].map((mod, index) => {
+                const colorClass = getModuleColor(mod, index);
                 return (
                   <button
                     key={mod}
                     onClick={() => {
-                      setState(prev => ({ ...prev, module: mod, sessionStartTime: Date.now(), progress: 0 }));
+                      setState(prev => ({ ...prev, module: mod, sessionStartTime: null, progress: 0 }));
                       if (window.innerWidth < 768) setIsSidebarOpen(false);
                     }}
                     className={cn(
                       "w-full text-left py-2 px-3 rounded-xl border text-[10px] font-bold transition-all",
                       state.module === mod 
-                        ? `${moduleColors[mod]} ${mod === "Comprehensive Final Exam" ? "text-black" : "text-white"} border-transparent shadow-sm scale-[1.01]` 
+                        ? `${colorClass} ${mod === "Comprehensive Final Exam" ? "text-black" : "text-white"} border-transparent shadow-sm scale-[1.01]` 
                         : "bg-white border-[#141414]/10 hover:border-[#141414]/30 text-[#141414]/60"
                     )}
                   >
@@ -862,7 +961,7 @@ export default function App() {
                 className={cn(
                   "h-full transition-all duration-1000 ease-out",
                   state.mode === "Learn/Study" 
-                    ? (30 * 60 * 1000 - (Date.now() - (state.sessionStartTime || Date.now())) < 5 * 60 * 1000 ? "bg-emerald-500" : "bg-blue-500")
+                    ? (state.sessionStartTime && (30 * 60 * 1000 - (Date.now() - state.sessionStartTime) < 5 * 60 * 1000) ? "bg-emerald-500" : "bg-blue-500")
                     : "bg-[#141414]"
                 )}
                 style={{ width: `${state.progress}%` }}
@@ -875,9 +974,11 @@ export default function App() {
               <span className="text-[10px] font-bold text-[#141414]">
                 {state.mode === "Learn/Study" ? (
                   (() => {
-                    const elapsed = Math.min(30 * 60 * 1000, Date.now() - (state.sessionStartTime || Date.now()));
-                    const mins = Math.floor(elapsed / 60000);
-                    const secs = Math.floor((elapsed % 60000) / 1000);
+                    const totalTime = 30 * 60 * 1000;
+                    const elapsed = state.sessionStartTime ? Math.min(totalTime, Date.now() - state.sessionStartTime) : 0;
+                    const remaining = totalTime - elapsed;
+                    const mins = Math.floor(remaining / 60000);
+                    const secs = Math.floor((remaining % 60000) / 1000);
                     return `${mins}:${secs.toString().padStart(2, '0')}`;
                   })()
                 ) : (state.mode === "Drill/Quiz" || state.mode === "Evaluate/Exam") ? (
@@ -934,14 +1035,13 @@ export default function App() {
                   </div>
                   <h3 className="text-lg font-serif italic font-semibold mb-2">Your Shift Awaits...</h3>
                   <p className="text-sm text-[#141414]/60 leading-relaxed mb-8">
-                    I have the core {
-                      state.module === "Comprehensive Final Exam" 
-                        ? "all the core" 
-                        : state.module.replace(/Module \d+ - /, "")
-                    } materials ready. To make our session even more effective, you can upload your own lecture notes or information in the sidebar.
+                    I have the core {state.module} materials ready for your {state.course} session. To make our session even more effective, you can upload your own lecture notes or information in the sidebar.
                   </p>
                   <button
-                    onClick={() => sendMessage("I am ready to clock-in and begin the session.")}
+                    onClick={() => {
+                      setState(prev => ({ ...prev, sessionStartTime: Date.now() }));
+                      sendMessage("I am ready to clock-in and begin the session.");
+                    }}
                     className="py-4 px-8 bg-[#141414] text-white rounded-2xl text-sm font-bold hover:opacity-90 transition-all shadow-lg flex items-center gap-2"
                   >
                     <Clock className="w-4 h-4 text-white" />
@@ -1137,31 +1237,26 @@ export default function App() {
                           </div>
                           {expandedOption === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </button>
-                        <AnimatePresence>
-                          {expandedOption === idx && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="bg-[#F5F5F0] border-x border-b border-[#141414]/5 rounded-b-2xl -mt-2 pt-4 p-4"
-                            >
-                              <div className="flex items-center gap-2 mb-2">
-                                {opt.isCorrect ? (
-                                  <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
-                                    <CheckCircle2 className="w-3 h-3" /> Correct
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
-                                    <AlertCircle className="w-3 h-3" /> Incorrect
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-xs text-[#141414]/70 leading-relaxed italic">
-                                {opt.rationale}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {expandedOption === idx && (
+                          <div
+                            className="bg-[#F5F5F0] border-x border-b border-[#141414]/5 rounded-b-2xl -mt-2 pt-4 p-4"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              {opt.isCorrect ? (
+                                <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-widest">
+                                  <CheckCircle2 className="w-3 h-3" /> Correct
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
+                                  <AlertCircle className="w-3 h-3" /> Incorrect
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#141414]/70 leading-relaxed italic">
+                              {opt.rationale}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1195,13 +1290,9 @@ export default function App() {
       )}
 
       {/* Calculator Modal */}
-      <AnimatePresence>
         {showCalculator && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            <div 
               className="bg-[#141414] text-white w-64 rounded-3xl shadow-2xl overflow-hidden border border-white/10"
             >
               <div className="p-4 flex items-center justify-between border-b border-white/5">
@@ -1250,10 +1341,9 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Auth Overlay */}
       {authMode && (
@@ -1388,13 +1478,9 @@ export default function App() {
       )}
 
       {/* Account Settings Modal */}
-      <AnimatePresence>
         {showAccountSettings && state.user && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[210] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            <div 
               className="bg-white w-full max-w-md rounded-3xl border border-[#141414]/10 shadow-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-[#141414]/5 flex items-center justify-between bg-[#F5F5F0]/50">
@@ -1494,10 +1580,9 @@ export default function App() {
                   Done
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </div>
   </div>
   );
