@@ -3,7 +3,7 @@ import google.generativeai as genai
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configure the Gemini API Key
 api_key = None
@@ -37,138 +37,182 @@ COURSES = [
 ]
 
 COURSE_MODULES = {
-    "Nursing 2": [
-        "Module 1 - Cardiac Part 1",
-        "Module 1 - Cardiac Part 2",
-        "Module 2 - Diabetes",
-        "Module 3 - Respiratory",
-        "Module 4 - Cancer",
-        "Comprehensive Final Exam"
-    ],
-    "Pharmacology for Nursing 2": [
-        "Module 1 - Endocrine Drug Therapy",
-        "Module 2 - Neuro/Neuromuscular Drug Therapy",
-        "Module 3 - Cardiovascular Drug Therapy",
-        "Module 4 - Respiratory/EENT Drug Therapy",
-        "Module 5 - Antibiotic Drug Therapy",
-        "Module 6 - Cancer Drug Therapy",
-        "Comprehensive Final Exam"
-    ],
-    "Mental Health Nursing": [
-        "Module 1 - Mental Health Nursing & MSA",
-        "Module 2 - Psychopharmacology & Psychotherapeutic Interventions",
-        "Module 3 - Neurocognitive, Somatic, Anxiety, & Stressor-Related Disorders",
-        "Module 4 - Depressive, Bipolar, & Personality Disorders",
-        "Module 5 - Schizophrenia Spectrum & Dissociative Disorders",
-        "Module 6 - Substance Use, Eating, & Gender Disorders",
-        "Comprehensive Final Exam"
-    ],
-    "LPN to ADN Transition": [
-        "Module 1 - Role Transition", 
-        "Module 2 - Advanced Assessment",
-        "Comprehensive Final Exam"
-    ],
-    "Paramedic to ADN Transition": [
-        "Module 1 - Clinical Reasoning", 
-        "Module 2 - Nursing Process",
-        "Comprehensive Final Exam"
-    ],
-    "Nursing 3": [
-        "Module 1 - Complex Cardiac", 
-        "Module 2 - Multi-System Failure",
-        "Comprehensive Final Exam"
-    ]
+    "Nursing 2": ["Module 1 - Cardiac Part 1", "Module 1 - Cardiac Part 2", "Module 2 - Diabetes", "Module 3 - Respiratory", "Module 4 - Cancer", "Comprehensive Final Exam"],
+    "Pharmacology for Nursing 2": ["Module 1 - Endocrine Drug Therapy", "Module 2 - Neuro/Neuromuscular Drug Therapy", "Module 3 - Cardiovascular Drug Therapy", "Module 4 - Respiratory/EENT Drug Therapy", "Module 5 - Antibiotic Drug Therapy", "Module 6 - Cancer Drug Therapy", "Comprehensive Final Exam"],
+    "Mental Health Nursing": ["Module 1 - Mental Health Nursing & MSA", "Module 2 - Psychopharmacology & Psychotherapeutic Interventions", "Module 3 - Neurocognitive, Somatic, Anxiety, & Stressor-Related Disorders", "Module 4 - Depressive, Bipolar, & Personality Disorders", "Module 5 - Schizophrenia Spectrum & Dissociative Disorders", "Module 6 - Substance Use, Eating, & Gender Disorders", "Comprehensive Final Exam"],
+    "LPN to ADN Transition": ["Module 1 - Role Transition", "Module 2 - Advanced Assessment", "Comprehensive Final Exam"],
+    "Paramedic to ADN Transition": ["Module 1 - Clinical Reasoning", "Module 2 - Nursing Process", "Comprehensive Final Exam"],
+    "Nursing 3": ["Module 1 - Complex Cardiac", "Module 2 - Multi-System Failure", "Comprehensive Final Exam"]
 }
+
+PROFILE_ICONS = ["Stethoscope", "Syringe", "Heart", "Activity", "Thermometer", "Pill", "Microscope", "Dna", "Brain", "Baby", "Eye", "Ear", "Hand", "BookOpen", "ClipboardCheck", "AlertCircle", "CheckCircle2", "FileText", "UserIcon", "Flame"]
+PROFILE_COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#F97316", "#EF4444", "#EC4899"]
+
+def check_badges(user):
+    badge_criteria = [
+        {"type": "Learn/Study", "threshold": 5, "title": "Study Scholar", "icon": "📖"},
+        {"type": "Drill/Quiz", "threshold": 5, "title": "Quiz Master", "icon": "📋"},
+        {"type": "Evaluate/Exam", "threshold": 5, "title": "Exam Expert", "icon": "📄"},
+        {"type": "Simulation/Case", "threshold": 5, "title": "Clinical Pro", "icon": "🩺"},
+        {"type": "Bedside Quiz", "threshold": 5, "title": "Bedside Ace", "icon": "⚡"},
+        {"type": "MAR Check", "threshold": 5, "title": "Safety First", "icon": "💊"},
+        {"type": "Stat Page", "threshold": 5, "title": "Rapid Responder", "icon": "🔥"},
+    ]
+    
+    new_badges = []
+    for criteria in badge_criteria:
+        count = user['activityCounts'].get(criteria['type'], 0)
+        if count > 0 and count % criteria['threshold'] == 0:
+            badge_id = f"{criteria['type']}-{count}"
+            if not any(b['id'] == badge_id for b in user['badges']):
+                new_badge = {
+                    "id": badge_id,
+                    "title": criteria['title'],
+                    "description": f"Completed {count} {criteria['type']} activities",
+                    "count": count,
+                    "dateEarned": datetime.now().strftime("%Y-%m-%d"),
+                    "icon": criteria['icon']
+                }
+                new_badges.append(new_badge)
+    
+    if new_badges:
+        user['badges'].extend(new_badges)
+        return new_badges
+    return []
 
 def main():
     st.set_page_config(page_title="OnCall: Nursing Study Assistant", page_icon="🩺", layout="wide")
     
-    # Custom CSS for colors and styling
+    # Custom CSS
     st.markdown("""
     <style>
-    .stApp {
-        background-color: #F5F5F0;
+    .stApp { background-color: #F5F5F0; }
+    .stSidebar { background-color: white !important; border-right: 1px solid rgba(20, 20, 20, 0.1); }
+    
+    /* Target the primary button to make it black with white text */
+    div.stButton > button[kind="primary"] {
+        background-color: #141414 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        border: none !important;
+        padding: 0.75rem 1.5rem !important;
+        font-weight: 700 !important;
     }
-    .stChatMessage {
-        border-radius: 1rem;
-        margin-bottom: 1rem;
+    
+    div.stButton > button:hover {
+        opacity: 0.9 !important;
     }
-    .stSidebar {
-        background-color: white !important;
-        border-right: 1px solid rgba(20, 20, 20, 0.1);
-    }
-    .streak-container {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    .streak-box {
-        background: white;
-        padding: 10px;
-        border-radius: 12px;
-        border: 1px solid #eee;
-        text-align: center;
-        flex: 1;
-    }
-    .streak-label {
-        font-size: 10px;
-        text-transform: uppercase;
-        color: #888;
-        font-weight: bold;
-    }
-    .streak-value {
-        font-size: 16px;
-        font-weight: bold;
-        color: #141414;
-    }
+
+    .streak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .streak-card { background: white; padding: 12px; border-radius: 16px; border: 1px solid #eee; text-align: center; }
+    .streak-label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 4px; }
+    .streak-val { font-size: 16px; font-weight: bold; color: #141414; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .badge-card { background: #F5F5F0; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
     # Initialize session state
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "clocked_in" not in st.session_state:
-        st.session_state.clocked_in = False
-    if "start_time" not in st.session_state:
-        st.session_state.start_time = None
-    if "output_count" not in st.session_state:
-        st.session_state.output_count = 0
-    if "eli5" not in st.session_state:
-        st.session_state.eli5 = False
-    if "user_streak" not in st.session_state:
-        st.session_state.user_streak = 1
+    if "user" not in st.session_state: st.session_state.user = None
+    if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
+    if "messages" not in st.session_state: st.session_state.messages = []
+    if "clocked_in" not in st.session_state: st.session_state.clocked_in = False
+    if "output_count" not in st.session_state: st.session_state.output_count = 0
+    if "start_time" not in st.session_state: st.session_state.start_time = None
+    if "active_quiz" not in st.session_state: st.session_state.active_quiz = None
+
+    # --- AUTHENTICATION FLOW ---
+    if not st.session_state.user:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("<div style='text-align: center; padding: 40px;'>", unsafe_allow_html=True)
+            st.title("🩺 OnCall Assistant")
+            
+            if st.session_state.auth_mode == "login":
+                st.subheader("Welcome Back")
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                if st.button("Sign In", use_container_width=True, type="primary"):
+                    # Simple mock auth
+                    st.session_state.user = {
+                        "name": email.split("@")[0].capitalize(),
+                        "email": email,
+                        "profileIcon": "Stethoscope",
+                        "profileColor": "#10B981",
+                        "dailyStreak": 5,
+                        "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
+                        "badges": [],
+                        "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
+                    }
+                    st.rerun()
+                if st.button("Create an Account", use_container_width=True):
+                    st.session_state.auth_mode = "signup"
+                    st.rerun()
+            else:
+                st.subheader("Create Account")
+                name = st.text_input("Full Name")
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                
+                st.markdown("### Build Your Profile")
+                icon = st.selectbox("Choose Your Icon", PROFILE_ICONS)
+                color = st.color_picker("Choose Your Color", "#10B981")
+                
+                if st.button("Sign Up", use_container_width=True, type="primary"):
+                    st.session_state.user = {
+                        "name": name,
+                        "email": email,
+                        "profileIcon": icon,
+                        "profileColor": color,
+                        "dailyStreak": 1,
+                        "activityCounts": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0, "Bedside Quiz": 0, "MAR Check": 0, "Stat Page": 0},
+                        "badges": [],
+                        "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
+                    }
+                    st.rerun()
+                if st.button("Already have an account? Sign In", use_container_width=True):
+                    st.session_state.auth_mode = "login"
+                    st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    # --- MAIN APP FLOW ---
+    user = st.session_state.user
 
     # Sidebar
     with st.sidebar:
-        st.markdown("<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
         
-        # User Profile Section
+        # User Profile
         st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f9f9f9; border-radius: 12px; margin-bottom: 20px;">
-            <div style="width: 40px; height: 40px; background: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                ME
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px; background: #f9f9f9; border-radius: 20px; margin-bottom: 20px; border: 1px solid #eee;">
+            <div style="width: 45px; height: 45px; background: {user['profileColor']}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
+                👤
             </div>
             <div>
-                <div style="font-weight: bold; font-size: 14px;">Nursing Student</div>
-                <div style="font-size: 10px; color: #F97316; font-weight: bold;">🔥 {st.session_state.user_streak} Day Streak</div>
+                <div style="font-weight: bold; font-size: 15px;">{user['name']}</div>
+                <div style="font-size: 11px; color: #F97316; font-weight: bold;">🔥 {user['dailyStreak']} Day Streak</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # Streaks Grid
-        st.markdown("""
-        <div class="streak-container">
-            <div class="streak-box"><div class="streak-label">Study</div><div class="streak-value">0</div></div>
-            <div class="streak-box"><div class="streak-label">Quiz</div><div class="streak-value">0</div></div>
-        </div>
-        <div class="streak-container">
-            <div class="streak-box"><div class="streak-label">MAR</div><div class="streak-value">0</div></div>
-            <div class="streak-box"><div class="streak-label">Stat</div><div class="streak-value">0</div></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Tracker Grid
+        st.markdown('<div class="streak-grid">', unsafe_allow_html=True)
+        trackers = [
+            {"label": "Study", "val": user['activityCounts'].get("Learn/Study", 0), "icon": "📖"},
+            {"label": "Quiz", "val": user['activityCounts'].get("Drill/Quiz", 0), "icon": "📋"},
+            {"label": "MAR", "val": user['activityCounts'].get("MAR Check", 0), "icon": "💊"},
+            {"label": "Stat", "val": user['activityCounts'].get("Stat Page", 0), "icon": "🔥"},
+        ]
+        for t in trackers:
+            st.markdown(f"""
+            <div class="streak-card">
+                <div class="streak-label">{t['label']}</div>
+                <div class="streak-val">{t['icon']} {t['val']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         st.divider()
-        
         st.header("Shift Settings")
         course = st.selectbox("Nursing Course", COURSES)
         modules = COURSE_MODULES.get(course, [])
@@ -176,72 +220,98 @@ def main():
         mode = st.selectbox("Learning Mode", ["Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
         level = st.selectbox("Learner Level", ["Beginner", "Intermediate", "Advanced"])
         
-        st.session_state.eli5 = st.toggle("Explain it like I'm 5", value=st.session_state.eli5)
-        
         st.divider()
+        if st.button("Achievements", use_container_width=True):
+            st.session_state.show_badges = True
+        
         st.subheader("Leaderboard")
-        st.markdown("""
-        <div style="font-size: 12px;">
-            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>1. Nurse Joy</span> <span>🔥 15</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>2. Clinical Chris</span> <span>🔥 12</span></div>
-            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>3. Student Sam</span> <span>🔥 8</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+        l_mode = st.selectbox("Rank by", ["Daily Streak", "Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
         
+        # Mock leaderboard data based on mode
+        l_data = [
+            {"name": "Nurse Joy", "val": 15 if l_mode == "Daily Streak" else 150},
+            {"name": "Clinical Chris", "val": 12 if l_mode == "Daily Streak" else 120},
+            {"name": "Student Sam", "val": 8 if l_mode == "Daily Streak" else 95},
+        ]
+        
+        st.markdown('<div style="font-size: 12px; background: #f9f9f9; padding: 10px; border-radius: 12px;">', unsafe_allow_html=True)
+        for entry in l_data:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">
+                <span>{entry['name']}</span> 
+                <span>{'🔥' if l_mode == 'Daily Streak' else '🏆'} {entry['val']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
         st.divider()
-        if st.button("Sign Out / Reset", use_container_width=True):
-            st.session_state.messages = []
+        if st.button("Sign Out", use_container_width=True):
+            st.session_state.user = None
             st.session_state.clocked_in = False
-            st.session_state.output_count = 0
+            st.session_state.messages = []
             st.rerun()
 
-    # Main Interface
+    # --- MAIN INTERFACE ---
     if not st.session_state.clocked_in:
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("""
-            <div style="text-align: center; padding: 40px; background: white; border-radius: 24px; border: 1px solid #eee; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-                <div style="font-size: 48px; margin-bottom: 20px;">🩺</div>
-                <h2 style="font-family: Georgia; font-style: italic;">Your Shift Awaits...</h2>
-                <p style="color: #666; margin-bottom: 30px;">Ready to begin your clinical study session? Clock-in to start tracking your progress and streaks.</p>
+            <div style="text-align: center; padding: 40px; background: white; border-radius: 32px; border: 1px solid #eee; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                <div style="font-size: 60px; margin-bottom: 20px;">🩺</div>
+                <h2 style="font-family: Georgia; font-style: italic; font-size: 28px;">Your Shift Awaits...</h2>
+                <p style="color: #666; margin-bottom: 30px; font-size: 16px;">Ready to begin your clinical study session? Clock-in to start tracking your progress and streaks.</p>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Time to Clock-in", use_container_width=True, type="primary"):
+            
+            # Custom styled button using markdown for the black background requirement
+            if st.button("🕒 Time to Clock-in", use_container_width=True, type="primary"):
                 st.session_state.clocked_in = True
                 st.session_state.start_time = time.time()
                 st.session_state.messages.append({"role": "assistant", "content": f"Clocked-in for {course} - {module}. How can I help you today?"})
                 st.rerun()
     else:
-        # Progress Bar
-        progress = min(st.session_state.output_count * 10, 100)
-        st.progress(progress / 100, text=f"Session Progress: {progress}%")
-        
-        # Display chat messages
+        # Progress Tracking
+        if mode == "Learn/Study":
+            total_time = 30 * 60
+            elapsed = time.time() - st.session_state.start_time
+            remaining = max(0, total_time - elapsed)
+            mins, secs = divmod(int(remaining), 60)
+            st.progress(min(1.0, elapsed / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
+        else:
+            progress = min(st.session_state.output_count * 10, 100)
+            st.progress(progress / 100, text=f"📊 Session Progress: {progress}%")
+
+        # Handle Pop-up Quizzes (Only in Learn/Study)
+        if st.session_state.active_quiz:
+            with st.container(border=True):
+                st.warning(f"🚨 Clinical Alert: {st.session_state.active_quiz}")
+                st.write("The patient requires immediate attention. Please answer the following:")
+                st.text_input("Your response...")
+                if st.button("Submit Clinical Action"):
+                    st.session_state.active_quiz = None
+                    st.success("Action recorded. Continuing session.")
+                    st.rerun()
+
+        # Chat Display
         for message in st.session_state.messages:
             avatar = "📖" if message["role"] == "assistant" else "👤"
             with st.chat_message(message["role"], avatar=avatar):
                 st.markdown(message["content"])
 
-        # Chat input
+        # Chat Input
         if prompt := st.chat_input("Enter your clinical query..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user", avatar="👤"):
                 st.markdown(prompt)
 
-            # Generate response
             with st.chat_message("assistant", avatar="📖"):
                 try:
-                    eli5_instruction = "Explain it like I'm 5 years old." if st.session_state.eli5 else ""
                     model = genai.GenerativeModel(
                         model_name='gemini-3-flash-preview',
-                        system_instruction=f"{SYSTEM_INSTRUCTION}\nCOURSE: {course}\nMODULE: {module}\nMODE: {mode}\nLEVEL: {level}\n{eli5_instruction}"
+                        system_instruction=f"{SYSTEM_INSTRUCTION}\nCOURSE: {course}\nMODULE: {module}\nMODE: {mode}\nLEVEL: {level}"
                     )
-                    
-                    history = []
-                    for m in st.session_state.messages[:-1]:
-                        history.append({"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]})
-                    
+                    history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
                     chat = model.start_chat(history=history)
                     response = chat.send_message(prompt)
                     
@@ -249,12 +319,44 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                     st.session_state.output_count += 1
                     
-                    # Mock Pop-up Trigger
-                    if st.session_state.output_count % 5 == 0:
-                        st.toast("🔔 Clinical Alert: Time for a Bedside Quiz!", icon="🩺")
+                    # Update Stats & Check Badges
+                    user['activityCounts'][mode] = user['activityCounts'].get(mode, 0) + 1
+                    new_badges = check_badges(user)
+                    for b in new_badges:
+                        st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
                     
+                    # Trigger Pop-ups (Only in Learn/Study)
+                    if mode == "Learn/Study":
+                        if st.session_state.output_count % 10 == 0:
+                            st.session_state.active_quiz = "MAR Check Required"
+                            st.rerun()
+                        elif st.session_state.output_count % 5 == 0:
+                            st.session_state.active_quiz = "Bedside Quiz Triggered"
+                            st.rerun()
+                            
                 except Exception as e:
                     st.error(f"Error: {e}")
+
+    # Achievement Modal Simulation
+    if st.session_state.get("show_badges"):
+        with st.container(border=True):
+            st.subheader("🏅 Your Achievements")
+            if not user['badges']:
+                st.write("No badges earned yet. Keep studying!")
+            else:
+                cols = st.columns(3)
+                for i, b in enumerate(user['badges']):
+                    with cols[i % 3]:
+                        st.markdown(f"""
+                        <div class="badge-card">
+                            <div style="font-size: 30px;">{b['icon']}</div>
+                            <div style="font-weight: bold; font-size: 14px;">{b['title']}</div>
+                            <div style="font-size: 10px; color: #888;">{b['dateEarned']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            if st.button("Close Achievements"):
+                st.session_state.show_badges = False
+                st.rerun()
 
 if __name__ == "__main__":
     main()
