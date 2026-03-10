@@ -122,7 +122,7 @@ def main():
         color: #141414;
     }
     </style>
-    """, unsafe_allow_value=True)
+    """, unsafe_allow_html=True)
 
     # Initialize session state
     if "messages" not in st.session_state:
@@ -153,7 +153,7 @@ def main():
                 <div style="font-size: 10px; color: #F97316; font-weight: bold;">🔥 {st.session_state.user_streak} Day Streak</div>
             </div>
         </div>
-        """, unsafe_allow_value=True)
+        """, unsafe_allow_html=True)
 
         # Streaks Grid
         st.markdown("""
@@ -165,7 +165,7 @@ def main():
             <div class="streak-box"><div class="streak-label">MAR</div><div class="streak-value">0</div></div>
             <div class="streak-box"><div class="streak-label">Stat</div><div class="streak-value">0</div></div>
         </div>
-        """, unsafe_allow_value=True)
+        """, unsafe_allow_html=True)
 
         st.divider()
         
@@ -186,7 +186,7 @@ def main():
             <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>2. Clinical Chris</span> <span>🔥 12</span></div>
             <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>3. Student Sam</span> <span>🔥 8</span></div>
         </div>
-        """, unsafe_allow_value=True)
+        """, unsafe_allow_html=True)
         
         st.divider()
         if st.button("Sign Out / Reset", use_container_width=True):
@@ -206,7 +206,7 @@ def main():
                 <h2 style="font-family: Georgia; font-style: italic;">Your Shift Awaits...</h2>
                 <p style="color: #666; margin-bottom: 30px;">Ready to begin your clinical study session? Clock-in to start tracking your progress and streaks.</p>
             </div>
-            """, unsafe_allow_value=True)
+            """, unsafe_allow_html=True)
             if st.button("Time to Clock-in", use_container_width=True, type="primary"):
                 st.session_state.clocked_in = True
                 st.session_state.start_time = time.time()
