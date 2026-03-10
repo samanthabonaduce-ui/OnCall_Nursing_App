@@ -48,6 +48,29 @@ COURSE_MODULES = {
 PROFILE_ICONS = ["Stethoscope", "Syringe", "Heart", "Activity", "Thermometer", "Pill", "Microscope", "Dna", "Brain", "Baby", "Eye", "Ear", "Hand", "BookOpen", "ClipboardCheck", "AlertCircle", "CheckCircle2", "FileText", "UserIcon", "Flame"]
 PROFILE_COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#F97316", "#EF4444", "#EC4899"]
 
+ICON_MAP = {
+    "Stethoscope": "🩺",
+    "Syringe": "💉",
+    "Heart": "❤️",
+    "Activity": "📈",
+    "Thermometer": "🌡️",
+    "Pill": "💊",
+    "Microscope": "🔬",
+    "Dna": "🧬",
+    "Brain": "🧠",
+    "Baby": "👶",
+    "Eye": "👁️",
+    "Ear": "👂",
+    "Hand": "✋",
+    "BookOpen": "📖",
+    "ClipboardCheck": "📋",
+    "AlertCircle": "⚠️",
+    "CheckCircle2": "✅",
+    "FileText": "📄",
+    "UserIcon": "👤",
+    "Flame": "🔥"
+}
+
 def check_badges(user):
     badge_criteria = [
         {"type": "Learn/Study", "threshold": 5, "title": "Study Scholar", "icon": "📖"},
