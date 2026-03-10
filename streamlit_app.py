@@ -108,6 +108,15 @@ def main():
     .streak-label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: bold; margin-bottom: 4px; }
     .streak-val { font-size: 16px; font-weight: bold; color: #141414; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .badge-card { background: #F5F5F0; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; margin-bottom: 10px; }
+    
+    .profile-area {
+        background: white;
+        padding: 24px;
+        border-radius: 28px;
+        border: 1px solid rgba(20, 20, 20, 0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        margin-bottom: 25px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -125,10 +134,11 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("<div style='text-align: center; padding: 40px;'>", unsafe_allow_html=True)
-            st.title("🩺 OnCall Assistant")
+            st.title("🩺 OnCall")
+            st.subheader("Your Nursing Study Assistant")
             
             if st.session_state.auth_mode == "login":
-                st.subheader("Welcome Back")
+                st.markdown("### Welcome Back")
                 email = st.text_input("Email")
                 password = st.text_input("Password", type="password")
                 if st.button("Sign In", use_container_width=True, type="primary"):
@@ -148,28 +158,49 @@ def main():
                     st.session_state.auth_mode = "signup"
                     st.rerun()
             else:
-                st.subheader("Create Account")
-                name = st.text_input("Full Name")
+                st.markdown("### Create Account")
+                name = st.text_input("Full Name", placeholder="Florence Nightingale")
                 email = st.text_input("Email")
                 password = st.text_input("Password", type="password")
                 
                 st.markdown("### Build Your Profile")
-                icon = st.selectbox("Choose Your Icon", PROFILE_ICONS)
-                color = st.color_picker("Choose Your Color", "#10B981")
+                
+                # Visual Icon Selection
+                st.write("Choose Your Icon")
+                icon_cols = st.columns(5)
+                selected_icon = st.session_state.get("temp_icon", "Stethoscope")
+                for i, icon_name in enumerate(PROFILE_ICONS[:10]): # Show first 10 for brevity
+                    with icon_cols[i % 5]:
+                        if st.button(ICON_MAP[icon_name], key=f"icon_{icon_name}"):
+                            st.session_state.temp_icon = icon_name
+                            st.rerun()
+                st.info(f"Selected Icon: {ICON_MAP[selected_icon]} {selected_icon}")
+                
+                # Visual Color Selection
+                st.write("Choose Your Color")
+                color_cols = st.columns(len(PROFILE_COLORS))
+                selected_color = st.session_state.get("temp_color", "#10B981")
+                for i, color_hex in enumerate(PROFILE_COLORS):
+                    with color_cols[i]:
+                        if st.button(" ", key=f"color_{color_hex}", help=color_hex):
+                            st.session_state.temp_color = color_hex
+                            st.rerun()
+                        st.markdown(f'<div style="width: 20px; height: 20px; background: {color_hex}; border-radius: 4px; margin-top: -35px; pointer-events: none;"></div>', unsafe_allow_html=True)
+                st.markdown(f'Selected Color: <span style="color: {selected_color}; font-weight: bold;">{selected_color}</span>', unsafe_allow_html=True)
                 
                 if st.button("Sign Up", use_container_width=True, type="primary"):
                     st.session_state.user = {
-                        "name": name,
+                        "name": name if name else "Florence Nightingale",
                         "email": email,
-                        "profileIcon": icon,
-                        "profileColor": color,
+                        "profileIcon": selected_icon,
+                        "profileColor": selected_color,
                         "dailyStreak": 1,
                         "activityCounts": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0, "Bedside Quiz": 0, "MAR Check": 0, "Stat Page": 0},
                         "badges": [],
                         "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
                     }
                     st.rerun()
-                if st.button("Already have an account? Sign In", use_container_width=True):
+                if st.button("Already have an account? Sign In", key="switch_to_login", use_container_width=True):
                     st.session_state.auth_mode = "login"
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
@@ -177,40 +208,52 @@ def main():
 
     # --- MAIN APP FLOW ---
     user = st.session_state.user
+    user_icon_emoji = ICON_MAP.get(user['profileIcon'], "👤")
 
     # Sidebar
     with st.sidebar:
         st.markdown(f"<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
         
-        # User Profile
+        # Profile Area
         st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 12px; padding: 15px; background: #f9f9f9; border-radius: 20px; margin-bottom: 20px; border: 1px solid #eee;">
-            <div style="width: 45px; height: 45px; background: {user['profileColor']}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
-                👤
+        <div style="background: white; padding: 20px; border-radius: 24px; border: 1px solid #eee; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                <div style="width: 50px; height: 50px; background: {user['profileColor']}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; border: 2px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    {user_icon_emoji}
+                </div>
+                <div>
+                    <div style="font-weight: 800; font-size: 16px; color: #141414;">{user['name']}</div>
+                    <div style="font-size: 11px; color: #F97316; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">🔥 {user['dailyStreak']} Day Streak</div>
+                </div>
             </div>
-            <div>
-                <div style="font-weight: bold; font-size: 15px;">{user['name']}</div>
-                <div style="font-size: 11px; color: #F97316; font-weight: bold;">🔥 {user['dailyStreak']} Day Streak</div>
+            <div class="streak-grid">
+                <div class="streak-card">
+                    <div class="streak-label">Study</div>
+                    <div class="streak-val">📖 {user['activityCounts'].get("Learn/Study", 0)}</div>
+                </div>
+                <div class="streak-card">
+                    <div class="streak-label">Quiz</div>
+                    <div class="streak-val">📋 {user['activityCounts'].get("Drill/Quiz", 0)}</div>
+                </div>
+                <div class="streak-card">
+                    <div class="streak-label">MAR</div>
+                    <div class="streak-val">💊 {user['activityCounts'].get("MAR Check", 0)}</div>
+                </div>
+                <div class="streak-card">
+                    <div class="streak-label">Stat</div>
+                    <div class="streak-val">🔥 {user['activityCounts'].get("Stat Page", 0)}</div>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # Tracker Grid
-        st.markdown('<div class="streak-grid">', unsafe_allow_html=True)
-        trackers = [
-            {"label": "Study", "val": user['activityCounts'].get("Learn/Study", 0), "icon": "📖"},
-            {"label": "Quiz", "val": user['activityCounts'].get("Drill/Quiz", 0), "icon": "📋"},
-            {"label": "MAR", "val": user['activityCounts'].get("MAR Check", 0), "icon": "💊"},
-            {"label": "Stat", "val": user['activityCounts'].get("Stat Page", 0), "icon": "🔥"},
-        ]
-        for t in trackers:
-            st.markdown(f"""
-            <div class="streak-card">
-                <div class="streak-label">{t['label']}</div>
-                <div class="streak-val">{t['icon']} {t['val']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.divider()
+        
+        # File Upload Area
+        st.header("Study Materials")
+        uploaded_files = st.file_uploader("Upload Lecture Notes (PDF/TXT)", accept_multiple_files=True)
+        if uploaded_files:
+            st.success(f"{len(uploaded_files)} files ready for session.")
 
         st.divider()
         st.header("Shift Settings")
@@ -221,8 +264,17 @@ def main():
         level = st.selectbox("Learner Level", ["Beginner", "Intermediate", "Advanced"])
         
         st.divider()
+        
+        # Enterprise API Key Option
+        with st.expander("Enterprise / University Settings"):
+            st.info("If you have a university Gemini API key, enter it here to bypass shared limits.")
+            st.session_state.custom_api_key = st.text_input("University API Key", value=st.session_state.custom_api_key, type="password")
+            if st.session_state.custom_api_key:
+                genai.configure(api_key=st.session_state.custom_api_key)
+        
         if st.button("Achievements", use_container_width=True):
             st.session_state.show_badges = True
+            st.rerun()
         
         st.subheader("Leaderboard")
         l_mode = st.selectbox("Rank by", ["Daily Streak", "Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
@@ -252,19 +304,27 @@ def main():
             st.rerun()
 
     # --- MAIN INTERFACE ---
+    # Title and Subtitle always visible
+    st.title("🩺 OnCall")
+    st.markdown("### Your Nursing Study Assistant")
+    
     if not st.session_state.clocked_in:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("""
             <div style="text-align: center; padding: 40px; background: white; border-radius: 32px; border: 1px solid #eee; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                 <div style="font-size: 60px; margin-bottom: 20px;">🩺</div>
-                <h2 style="font-family: Georgia; font-style: italic; font-size: 28px;">Your Shift Awaits...</h2>
-                <p style="color: #666; margin-bottom: 30px; font-size: 16px;">Ready to begin your clinical study session? Clock-in to start tracking your progress and streaks.</p>
+                <h2 style="font-family: Georgia; font-style: italic; font-size: 28px;">Ready to begin your clinical study session?</h2>
+                <p style="color: #666; margin-bottom: 20px; font-size: 16px;">
+                    Choose your shift settings. To make our session even more effective, you can upload your own lecture notes or information in the sidebar.
+                </p>
+                <p style="color: #141414; font-weight: bold; margin-bottom: 30px; font-size: 16px;">
+                    Clock-in to start tracking your progress and streaks.
+                </p>
             </div>
             """, unsafe_allow_html=True)
             
-            # Custom styled button using markdown for the black background requirement
             if st.button("🕒 Time to Clock-in", use_container_width=True, type="primary"):
                 st.session_state.clocked_in = True
                 st.session_state.start_time = time.time()
