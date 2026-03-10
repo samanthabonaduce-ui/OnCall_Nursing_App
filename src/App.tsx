@@ -81,15 +81,21 @@ const PROFILE_COLORS = [
 ];
 
 const COURSES: NursingCourse[] = [
-  "Pharmacology for Nursing 2",
-  "Mental Health Nursing",
+  "Foundations of Nursing",
+  "Professional Communication",
+  "Pharmacology for Nursing 1",
   "LPN to ADN Transition",
   "Paramedic to ADN Transition",
+  "Nursing 1",
+  "Pharmacology for Nursing 2",
+  "Mental Health Nursing",
+  "Child and Family Nursing",
   "Nursing 2",
-  "Nursing 3"
+  "Nursing 3",
+  "Transition to Nursing Practice"
 ];
 
-const COURSE_MODULES: Record<NursingCourse, string[]> = {
+const COURSE_MODULES: Partial<Record<NursingCourse, string[]>> = {
   "Nursing 2": [
     "Module 1 - Cardiac Part 1",
     "Module 1 - Cardiac Part 2",
@@ -190,6 +196,8 @@ export default function App() {
   });
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [newBadgeEarned, setNewBadgeEarned] = useState<any | null>(null);
 
   const logout = () => {
     localStorage.removeItem("oncall_user");
@@ -344,6 +352,27 @@ export default function App() {
     }
   };
 
+  const updateStats = async (mode: string, module: string, minutes?: number, activityType?: string) => {
+    if (!state.user) return;
+    try {
+      const res = await fetch("/api/user/update-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: state.user.id, mode, module, minutes, activityType }),
+      });
+      const data = await res.json();
+      if (data.user) {
+        setState(prev => ({ ...prev, user: data.user }));
+        // Find the newest badge
+        const latestBadge = data.user.badges[data.user.badges.length - 1];
+        setNewBadgeEarned(latestBadge);
+        setTimeout(() => setNewBadgeEarned(null), 5000);
+      }
+    } catch (e) {
+      console.error("Stats update error", e);
+    }
+  };
+
   const updateStreak = async (type: "study" | "quiz" | "mar" | "stat", increment: boolean) => {
     if (!state.user) return;
     try {
@@ -426,6 +455,7 @@ export default function App() {
   const triggerPopUp = async (type: "Bedside Quiz" | "MAR Check" | "Stat Page") => {
     setState(prev => ({ ...prev, isThinking: true, activePopUp: type, currentQuizIndex: 0 }));
     setExpandedOption(null);
+    updateStats(state.mode, state.module, 0, type);
     try {
       const moduleSources = state.sources.filter(s => 
         !s.moduleId || s.moduleId === state.module || state.module === "Comprehensive Final Exam"
@@ -466,17 +496,9 @@ export default function App() {
       const result = await chatWithGemini(newMessages, state.mode, state.level, moduleSources, state.course);
       const newOutputCount = state.outputCount + 1;
 
-      // Update stats on server (usage only, streak is now session-based)
+      // Update stats on server
       if (state.user) {
-        fetch("/api/user/update-stats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            userId: state.user.id, 
-            mode: state.mode, 
-            module: state.module 
-          }),
-        });
+        updateStats(state.mode, state.module);
       }
 
       setState(prev => ({
@@ -492,19 +514,20 @@ export default function App() {
       }));
 
       // Check for pop-up triggers
-      if (state.mode === "Learn/Study") {
-        // Bedside @ 5, 15, 25... MAR @ 10, 20, 30...
+      // Trigger at 5, 10, 15... for all modes to ensure engagement
+      if (newOutputCount % 5 === 0) {
         if (newOutputCount % 10 === 0) {
           triggerPopUp("MAR Check");
-        } else if (newOutputCount % 5 === 0) {
+        } else {
           triggerPopUp("Bedside Quiz");
-        } 
-        
+        }
+      }
+      
+      if (state.mode === "Learn/Study") {
         // Random STAT Page (3 per 30m session)
-        // Probability increases if we haven't triggered enough yet
         const remainingStatPages = 3 - state.statPagesTriggered;
         if (remainingStatPages > 0) {
-          const chance = 0.08; // Base chance per message
+          const chance = 0.1; 
           if (Math.random() < chance) {
             triggerPopUp("Stat Page");
             setState(prev => ({ ...prev, statPagesTriggered: prev.statPagesTriggered + 1 }));
@@ -623,6 +646,21 @@ export default function App() {
             : "w-0 opacity-0 pointer-events-none -translate-x-full md:translate-x-0"
         )}>
           <div className="w-80 flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Achievements Button */}
+            <button 
+              onClick={() => setShowAchievements(true)}
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#141414]/5 transition-all group"
+            >
+              <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-600 group-hover:scale-110 transition-transform">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-[#141414]">Achievements</p>
+                <p className="text-[10px] text-[#141414]/40 uppercase tracking-widest">View your badges</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#141414]/20" />
+            </button>
+
             {/* User Profile & Streaks */}
             {state.user && (
               <section 
@@ -782,7 +820,8 @@ export default function App() {
                 value={state.course}
                 onChange={(e) => {
                   const newCourse = e.target.value as NursingCourse;
-                  const firstModule = COURSE_MODULES[newCourse][0];
+                  const modules = COURSE_MODULES[newCourse];
+                  const firstModule = modules ? modules[0] : "General Study";
                   setState(prev => ({ 
                     ...prev, 
                     course: newCourse, 
@@ -837,33 +876,35 @@ export default function App() {
           </section>
 
           {/* Module Selection */}
-          <section>
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#141414]/40 mb-3">
-              Course Modules
-            </h2>
-            <div className="space-y-1.5">
-              {COURSE_MODULES[state.course].map((mod, index) => {
-                const colorClass = getModuleColor(mod, index);
-                return (
-                  <button
-                    key={mod}
-                    onClick={() => {
-                      setState(prev => ({ ...prev, module: mod, sessionStartTime: null, progress: 0 }));
-                      if (window.innerWidth < 768) setIsSidebarOpen(false);
-                    }}
-                    className={cn(
-                      "w-full text-left py-2 px-3 rounded-xl border text-[10px] font-bold transition-all",
-                      state.module === mod 
-                        ? `${colorClass} ${mod === "Comprehensive Final Exam" ? "text-black" : "text-white"} border-transparent shadow-sm scale-[1.01]` 
-                        : "bg-white border-[#141414]/10 hover:border-[#141414]/30 text-[#141414]/60"
-                    )}
-                  >
-                    {mod}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          {COURSE_MODULES[state.course] && (
+            <section>
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[#141414]/40 mb-3">
+                Course Modules
+              </h2>
+              <div className="space-y-1.5">
+                {COURSE_MODULES[state.course]?.map((mod, index) => {
+                  const colorClass = getModuleColor(mod, index);
+                  return (
+                    <button
+                      key={mod}
+                      onClick={() => {
+                        setState(prev => ({ ...prev, module: mod, sessionStartTime: null, progress: 0 }));
+                        if (window.innerWidth < 768) setIsSidebarOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left py-2 px-3 rounded-xl border text-[10px] font-bold transition-all",
+                        state.module === mod 
+                          ? `${colorClass} ${mod === "Comprehensive Final Exam" ? "text-black" : "text-white"} border-transparent shadow-sm scale-[1.01]` 
+                          : "bg-white border-[#141414]/10 hover:border-[#141414]/30 text-[#141414]/60"
+                      )}
+                    >
+                      {mod}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Study Notes */}
           <section>
@@ -1063,9 +1104,18 @@ export default function App() {
                   >
                     <div className={cn(
                       "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-1",
-                      msg.role === "user" ? "bg-[#9CA3AF] text-white" : "bg-white border border-[#141414]/10"
-                    )}>
-                      {msg.role === "user" ? <span className="text-[10px] font-bold">ME</span> : <BookOpen className="w-4 h-4" />}
+                      msg.role === "user" ? "text-white" : "bg-white border border-[#141414]/10"
+                    )}
+                    style={msg.role === "user" ? { backgroundColor: state.user?.profileColor || "#9CA3AF" } : {}}
+                    >
+                      {msg.role === "user" ? (
+                        (() => {
+                          const IconComp = PROFILE_ICONS.find(pi => pi.name === state.user?.profileIcon)?.icon || UserIcon;
+                          return <IconComp className="w-4 h-4" />;
+                        })()
+                      ) : (
+                        <BookOpen className="w-4 h-4" />
+                      )}
                     </div>
                     <div className={cn(
                       "flex-1 p-4 rounded-2xl text-sm leading-relaxed",
@@ -1093,7 +1143,7 @@ export default function App() {
               {state.isThinking && (
                 <div className="flex gap-4 max-w-3xl mx-auto">
                   <div className="w-8 h-8 rounded-lg bg-white border border-[#141414]/10 flex items-center justify-center shrink-0">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#141414]/40" />
+                    <BookOpen className="w-4 h-4 text-[#141414]/40 animate-pulse" />
                   </div>
                   <div className="flex-1 p-4 rounded-2xl bg-white border border-[#141414]/5 shadow-sm">
                     <div className="flex gap-1">
@@ -1490,6 +1540,104 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Achievements Modal */}
+      <AnimatePresence>
+        {showAchievements && state.user && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[210] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white w-full max-w-2xl h-[80vh] rounded-3xl border border-[#141414]/10 shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-[#141414]/5 flex items-center justify-between bg-[#F5F5F0]/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-yellow-500/10 text-yellow-600">
+                    <Trophy className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif italic font-bold">Nursing Achievements</h2>
+                    <p className="text-xs text-[#141414]/40 uppercase tracking-widest font-medium">Your earned badges</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowAchievements(false)}
+                  className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8">
+                {state.user.badges && state.user.badges.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    {state.user.badges.map((badge) => {
+                      const IconComp = PROFILE_ICONS.find(i => i.name === badge.icon)?.icon || Trophy;
+                      return (
+                        <motion.div 
+                          key={badge.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="flex flex-col items-center text-center p-6 rounded-3xl border border-[#141414]/5 bg-[#F5F5F0]/30 hover:bg-white hover:shadow-xl transition-all group"
+                        >
+                          <div className="w-20 h-20 rounded-full bg-white shadow-inner flex items-center justify-center mb-4 border-4 border-yellow-500/20 group-hover:border-yellow-500 transition-all">
+                            <IconComp className="w-10 h-10 text-yellow-600" />
+                          </div>
+                          <h3 className="font-bold text-sm mb-1">{badge.title}</h3>
+                          <p className="text-[10px] text-[#141414]/40 uppercase tracking-widest font-bold mb-2">Level {badge.count}</p>
+                          <p className="text-[10px] text-[#141414]/60 italic leading-tight">{badge.description}</p>
+                          <p className="mt-3 text-[8px] text-[#141414]/30 uppercase tracking-tighter">Earned {new Date(badge.dateEarned).toLocaleDateString()}</p>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-24 h-24 rounded-full bg-[#141414]/5 flex items-center justify-center">
+                      <Trophy className="w-12 h-12 text-[#141414]/10" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">No badges yet</h3>
+                      <p className="text-sm text-[#141414]/40 max-w-xs">Complete study sessions, quizzes, and clinical checks to earn your first badge!</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 bg-[#F5F5F0]/50 border-t border-[#141414]/5">
+                <button 
+                  onClick={() => setShowAchievements(false)}
+                  className="w-full py-3 bg-[#141414] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
+                >
+                  Back to Shift
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* New Badge Notification */}
+      <AnimatePresence>
+        {newBadgeEarned && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 50, x: "-50%" }}
+            className="fixed bottom-10 left-1/2 z-[500] bg-[#141414] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
+          >
+            <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
+              <Trophy className="w-6 h-6 text-black" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-yellow-500">New Achievement!</p>
+              <p className="font-bold">{newBadgeEarned.title}</p>
+              <p className="text-xs text-white/60">Level {newBadgeEarned.count} reached</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Account Settings Modal */}
       <AnimatePresence>

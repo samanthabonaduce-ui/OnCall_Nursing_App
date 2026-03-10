@@ -85,6 +85,16 @@ async function startServer() {
         stats: {
           modes: {},
           modules: {}
+        },
+        badges: [],
+        activityCounts: {
+          "Learn/Study": 0,
+          "Drill/Quiz": 0,
+          "Evaluate/Exam": 0,
+          "Simulation/Case": 0,
+          "Bedside Quiz": 0,
+          "MAR Check": 0,
+          "Stat Page": 0
         }
       };
 
@@ -139,19 +149,83 @@ async function startServer() {
   });
 
   // Stats & Streaks Routes
+  const checkBadges = (user: any) => {
+    const badgeCriteria = [
+      { type: "Learn/Study", threshold: 5, title: "Study Scholar", icon: "BookOpen" },
+      { type: "Drill/Quiz", threshold: 5, title: "Quiz Master", icon: "ClipboardCheck" },
+      { type: "Evaluate/Exam", threshold: 5, title: "Exam Expert", icon: "FileText" },
+      { type: "Simulation/Case", threshold: 5, title: "Clinical Pro", icon: "Stethoscope" },
+      { type: "Bedside Quiz", threshold: 5, title: "Bedside Ace", icon: "Activity" },
+      { type: "MAR Check", threshold: 5, title: "Safety First", icon: "Pill" },
+      { type: "Stat Page", threshold: 5, title: "Rapid Responder", icon: "Flame" },
+    ];
+
+    const newBadges: any[] = [];
+    badgeCriteria.forEach(criteria => {
+      const count = user.activityCounts[criteria.type] || 0;
+      if (count > 0 && count % criteria.threshold === 0) {
+        const badgeId = `${criteria.type}-${count}`;
+        if (!user.badges.find((b: any) => b.id === badgeId)) {
+          newBadges.push({
+            id: badgeId,
+            title: criteria.title,
+            description: `Completed ${count} ${criteria.type} activities`,
+            count: count,
+            type: criteria.type,
+            dateEarned: new Date().toISOString(),
+            icon: criteria.icon
+          });
+        }
+      }
+    });
+
+    if (newBadges.length > 0) {
+      user.badges = [...user.badges, ...newBadges];
+      return true;
+    }
+    return false;
+  };
+
   app.post("/api/user/update-stats", (req, res) => {
-    const { userId, mode, module, minutes } = req.body;
+    const { userId, mode, module, minutes, activityType } = req.body;
     const users = getUsers();
     const user = users.find((u: any) => u.id === userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Initialize if missing (for existing users)
+    if (!user.activityCounts) {
+      user.activityCounts = {
+        "Learn/Study": 0,
+        "Drill/Quiz": 0,
+        "Evaluate/Exam": 0,
+        "Simulation/Case": 0,
+        "Bedside Quiz": 0,
+        "MAR Check": 0,
+        "Stat Page": 0
+      };
+    }
+    if (!user.badges) user.badges = [];
+
     // Update usage
-    user.stats.modes[mode] = (user.stats.modes[mode] || 0) + 1;
-    user.stats.modules[module] = (user.stats.modules[module] || 0) + 1;
+    if (mode) {
+      user.stats.modes[mode] = (user.stats.modes[mode] || 0) + 1;
+      user.activityCounts[mode] = (user.activityCounts[mode] || 0) + 1;
+    }
+    if (module) user.stats.modules[module] = (user.stats.modules[module] || 0) + 1;
     if (minutes) user.totalStudyMinutes += minutes;
+    
+    if (activityType) {
+      user.activityCounts[activityType] = (user.activityCounts[activityType] || 0) + 1;
+    }
+
+    const earnedNewBadge = checkBadges(user);
 
     saveUsers(users);
-    res.json({ success: true, totalStudyMinutes: user.totalStudyMinutes });
+    res.json({ 
+      success: true, 
+      user: earnedNewBadge ? user : undefined,
+      totalStudyMinutes: user.totalStudyMinutes 
+    });
   });
 
   app.get("/api/creator/users", (req, res) => {

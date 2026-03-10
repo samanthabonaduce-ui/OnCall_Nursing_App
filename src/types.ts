@@ -9,12 +9,28 @@ export type AppMode = "Learn/Study" | "Drill/Quiz" | "Evaluate/Exam" | "Simulati
 export type LearnerLevel = "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
 
 export type NursingCourse = 
-  | "Pharmacology for Nursing 2"
-  | "Mental Health Nursing"
+  | "Foundations of Nursing"
+  | "Professional Communication"
+  | "Pharmacology for Nursing 1"
   | "LPN to ADN Transition"
   | "Paramedic to ADN Transition"
+  | "Nursing 1"
+  | "Pharmacology for Nursing 2"
+  | "Mental Health Nursing"
+  | "Child and Family Nursing"
   | "Nursing 2"
-  | "Nursing 3";
+  | "Nursing 3"
+  | "Transition to Nursing Practice";
+
+export type Badge = {
+  id: string;
+  title: string;
+  description: string;
+  count: number;
+  type: string;
+  dateEarned: string;
+  icon: string;
+};
 
 export type Module = string;
 
@@ -65,6 +81,8 @@ export type User = {
   pointsCase: number;
   isCreator?: boolean;
   stats: UserStats;
+  badges: Badge[];
+  activityCounts: Record<string, number>;
 };
 
 export type SessionState = {
