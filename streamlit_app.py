@@ -140,7 +140,7 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.markdown("<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_value=True)
+        st.markdown("<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
         
         # User Profile Section
         st.markdown(f"""
@@ -197,7 +197,7 @@ def main():
 
     # Main Interface
     if not st.session_state.clocked_in:
-        st.markdown("<br><br>", unsafe_allow_value=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("""
