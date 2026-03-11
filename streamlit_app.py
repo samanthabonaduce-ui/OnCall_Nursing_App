@@ -270,22 +270,41 @@ def main():
             st.success("Profile updated!")
             st.rerun()
 
-    @st.dialog("🚨 Clinical Alert", width="large")
+    @st.dialog("Clinical Quiz", width="large")
     def show_quiz_dialog(quiz_type):
+        # Quiz UI Config
+        quiz_configs = {
+            "Bedside Quiz": {"icon": "🛏️", "color": "#3B82F6", "scenario": False},
+            "MAR Check": {"icon": "💉", "color": "#F59E0B", "scenario": True},
+            "Stat Page": {"icon": "🚨", "color": "#EF4444", "scenario": True}
+        }
+        config = quiz_configs.get(quiz_type, {"icon": "🩺", "color": "#141414", "scenario": True})
+
+        st.markdown(f"""
+            <div style="background: {config['color']}; padding: 15px; border-radius: 12px; color: white; display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <span style="font-size: 24px;">{config['icon']}</span>
+                <h2 style="margin: 0; color: white; font-family: 'Cormorant Garamond', serif;">{quiz_type}</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
         if not st.session_state.quiz_data:
             with st.spinner("Generating clinical scenario..."):
                 context = "\n".join([m["content"] for m in st.session_state.messages[-5:]])
+                # Bedside Quiz: 2 comprehension level NCLEX MCQs.
+                # MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education.
+                # STAT Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA.
+                
                 prompt = f"""Generate a {quiz_type} for a nursing student. 
                 Context of current study: {context}
                 
                 Requirements for {quiz_type}:
-                - Bedside Quiz: 2 comprehension level NCLEX MCQs.
-                - MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education.
-                - STAT Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA.
+                {"- Bedside Quiz: 2 comprehension level NCLEX MCQs. No patient scenario." if quiz_type == "Bedside Quiz" else ""}
+                {"- MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education. Include a patient scenario." if quiz_type == "MAR Check" else ""}
+                {"- Stat Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA." if quiz_type == "Stat Page" else ""}
                 
                 Return JSON format:
                 {{
-                    "scenario": "string (optional)",
+                    "scenario": "string (required if specified)",
                     "questions": [
                         {{
                             "type": "MCQ" or "SATA" or "Fill",
@@ -307,6 +326,7 @@ def main():
                     st.session_state.quiz_step = 0
                     st.session_state.quiz_score = 0
                     st.session_state.quiz_results = []
+                    st.session_state.quiz_answered = False
                 except Exception as e:
                     st.error(f"Failed to generate quiz: {e}")
                     if st.button("Close"): st.session_state.active_quiz = None; st.rerun()
@@ -317,79 +337,94 @@ def main():
         
         if step < len(data["questions"]):
             q = data["questions"][step]
-            if data.get("scenario") and step == 0:
+            st.markdown(f"**Question {step + 1} of {len(data['questions'])}**")
+            
+            if config['scenario'] and data.get("scenario") and step == 0:
                 st.info(f"**Scenario:** {data['scenario']}")
             
-            st.markdown(f"### Question {step + 1}")
-            st.write(q["question"])
+            st.markdown(f"### {q['question']}")
             
             user_ans = None
             if q["type"] == "MCQ":
-                user_ans = st.radio("Select the best option:", q["options"], key=f"q_{step}")
+                user_ans = st.radio("Select the best option:", q["options"], key=f"q_{step}_{st.session_state.active_quiz}")
             elif q["type"] == "SATA":
                 user_ans = []
                 for opt in q["options"]:
-                    if st.checkbox(opt, key=f"q_{step}_{opt}"):
+                    if st.checkbox(opt, key=f"q_{step}_{opt}_{st.session_state.active_quiz}"):
                         user_ans.append(opt)
             elif q["type"] == "Fill":
-                user_ans = st.text_input("Enter your calculation:", key=f"q_{step}")
+                user_ans = st.text_input("Enter your calculation:", key=f"q_{step}_{st.session_state.active_quiz}")
 
-            if st.button("Check Answer" if q["type"] != "Fill" else "Verify Calculation"):
-                is_correct = False
-                if q["type"] == "MCQ": is_correct = (user_ans == q["answer"])
-                elif q["type"] == "SATA": is_correct = (set(user_ans) == set(q["answer"]))
-                elif q["type"] == "Fill": is_correct = (user_ans.strip() == str(q["answer"]).strip())
-                
-                if is_correct:
+            if not st.session_state.quiz_answered:
+                if st.button("Submit Answer"):
+                    is_correct = False
+                    if q["type"] == "MCQ": is_correct = (user_ans == q["answer"])
+                    elif q["type"] == "SATA": is_correct = (set(user_ans) == set(q["answer"]))
+                    elif q["type"] == "Fill": is_correct = (user_ans.strip() == str(q["answer"]).strip())
+                    
+                    st.session_state.quiz_answered = True
+                    if is_correct:
+                        st.session_state.quiz_score += 1
+                        st.session_state.last_ans_correct = True
+                    else:
+                        st.session_state.last_ans_correct = False
+                    st.rerun()
+            else:
+                if st.session_state.last_ans_correct:
                     st.success("✅ Correct!")
-                    st.session_state.quiz_score += 1
                 else:
                     st.error(f"❌ Incorrect. The correct answer was: {q['answer']}")
                 
                 st.markdown(f"**Rationale:** {q['rationale']}")
-                st.session_state.quiz_results.append(is_correct)
                 
                 if step < len(data["questions"]) - 1:
                     if st.button("Next Question"):
                         st.session_state.quiz_step += 1
+                        st.session_state.quiz_answered = False
                         st.rerun()
                 else:
-                    if st.button("Submit Quiz"):
+                    if st.button("View Final Results"):
                         st.session_state.quiz_step = 99 # Final screen
                         st.rerun()
         else:
-            st.balloons() if st.session_state.quiz_score == len(data["questions"]) else None
+            total_q = len(data["questions"])
             st.markdown(f"## Quiz Complete!")
-            st.markdown(f"### Final Score: {st.session_state.quiz_score} / {len(data['questions'])}")
+            st.markdown(f"### Final Score: {st.session_state.quiz_score} / {total_q}")
             
-            if st.session_state.quiz_score == len(data["questions"]):
+            # Update user stats: Only 100% quizzes count
+            if st.session_state.quiz_score == total_q:
+                st.balloons()
                 st.session_state.user['activityCounts'][quiz_type] = st.session_state.user['activityCounts'].get(quiz_type, 0) + 1
                 st.session_state.user_db[st.session_state.user['email']] = st.session_state.user
                 save_users()
                 st.success(f"Perfect score! Progress recorded for {quiz_type}.")
+            else:
+                st.warning("Only 100% correct quizzes are added to your total count. Keep practicing!")
             
             if st.button("Return to Shift", use_container_width=True, type="primary"):
                 st.session_state.active_quiz = None
                 st.session_state.quiz_data = None
+                st.session_state.quiz_answered = False
                 st.rerun()
 
     # --- AUTHENTICATION FLOW ---
     if not st.session_state.user:
-        col1, col2, col3 = st.columns([1, 2, 1])
+        col1, col2, col3 = st.columns([1, 6, 1])
         with col2:
-            st.markdown("<div style='text-align: center; padding: 40px;'>", unsafe_allow_html=True)
             st.markdown("""
-                <div style="margin-bottom: 2rem;">
-                    <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; line-height: 1; margin-bottom: 0.5rem; font-weight: 400;">
-                        OnCall: <span class="fancy-italic">Nursing Study Assistant</span>
+                <div style="text-align: center; margin-bottom: 2rem; padding-top: 40px;">
+                    <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 4rem; line-height: 1; margin-bottom: 1rem; font-weight: 400;">
+                        🩺 <i>OnCall</i>: <span class="fancy-italic">Nursing Study Assistant</span>
                     </h1>
-                    <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: #666; margin-top: 0; font-style: italic; font-weight: 300;">
-                        Study & Learn with your OnCall Assistant
+                    <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: #666; margin-top: 0; font-style: italic; font-weight: 300;">
+                        Study & Learn with your <i>OnCall</i> Assistant
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             
-            if st.session_state.auth_mode == "login":
+            auth_col1, auth_col2, auth_col3 = st.columns([1, 2, 1])
+            with auth_col2:
+                if st.session_state.auth_mode == "login":
                 st.markdown("### Welcome Back")
                 email = st.text_input("Email")
                 password = st.text_input("Password", type="password")
@@ -475,7 +510,7 @@ def main():
     with st.sidebar:
         st.markdown("""
             <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; line-height: 1.1; margin-bottom: 1rem; font-weight: 400; font-style: italic;">
-                OnCall: Nursing Study Assistant
+                <i>OnCall</i>: Nursing Study Assistant
             </h1>
         """, unsafe_allow_html=True)
         
@@ -569,10 +604,10 @@ def main():
     st.markdown("""
         <div style="margin-bottom: 2rem;">
             <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; line-height: 1; margin-bottom: 0.5rem; font-weight: 400;">
-                🩺 OnCall: <span class="fancy-italic">Nursing Study Assistant</span>
+                🩺 <i>OnCall</i>: <span class="fancy-italic">Nursing Study Assistant</span>
             </h1>
             <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: #666; margin-top: 0; font-style: italic; font-weight: 300;">
-                Study & Learn with your OnCall Assistant
+                Study & Learn with your <i>OnCall</i> Assistant
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -635,7 +670,22 @@ def main():
             if st.button("🕒 Time to Clock-in", use_container_width=True, type="primary"):
                 st.session_state.clocked_in = True
                 st.session_state.start_time = time.time()
-                st.session_state.messages.append({"role": "assistant", "content": f"Clocked-in for {course} - {module}. How can I help you today?"})
+                
+                # Automatic Start based on settings
+                with st.spinner("Initializing shift..."):
+                    try:
+                        model = genai.GenerativeModel('gemini-3-flash-preview')
+                        init_prompt = f"""The nursing student has clocked in for:
+                        Course: {course}
+                        Module: {module}
+                        Mode: {mode}
+                        Level: {level}
+                        
+                        As their OnCall Assistant, provide a brief, professional clinical greeting and get started with the first learning objective or question based on these settings."""
+                        response = model.generate_content(init_prompt)
+                        st.session_state.messages.append({"role": "assistant", "content": response.text})
+                    except Exception as e:
+                        st.session_state.messages.append({"role": "assistant", "content": f"Clocked-in for {course} - {module}. How can I help you today?"})
                 st.rerun()
     else:
         # Handle Pop-up Quizzes (Only in Learn/Study)
