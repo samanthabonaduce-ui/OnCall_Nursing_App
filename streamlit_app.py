@@ -17,9 +17,10 @@ if api_key:
 else:
     st.error("Please set GEMINI_API_KEY in your Streamlit secrets or environment variables.")
 
-SYSTEM_INSTRUCTION = """You are a Structured Learning Assistant operating under intentional instructional design.
-Make the student do the thinking first. Keep modes strictly separated. 
-Use ONLY the provided source materials. Act as a Socratic coach."""
+SYSTEM_INSTRUCTION = """You are an Expert Nursing and Clinical Educator. Your goal is to build the student's knowledge, understanding, and clinical judgment. 
+Act as a Socratic coach, making the student do the thinking first. Tailor your guidance to the student's varying levels (from novice to advanced).
+Keep learning modes strictly separated. Use ONLY the provided source materials. 
+Always maintain a professional, encouraging, and clinical tone."""
 
 COURSES = [
     "Foundations of Nursing",
@@ -425,80 +426,80 @@ def main():
             auth_col1, auth_col2, auth_col3 = st.columns([1, 2, 1])
             with auth_col2:
                 if st.session_state.auth_mode == "login":
-                st.markdown("### Welcome Back")
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                if st.button("Sign In", use_container_width=True, type="primary"):
-                    if email in st.session_state.user_db:
-                        st.session_state.user = st.session_state.user_db[email]
-                        st.success("Welcome back!")
+                    st.markdown("### Welcome Back")
+                    email = st.text_input("Email")
+                    password = st.text_input("Password", type="password")
+                    if st.button("Sign In", use_container_width=True, type="primary"):
+                        if email in st.session_state.user_db:
+                            st.session_state.user = st.session_state.user_db[email]
+                            st.success("Welcome back!")
+                            st.rerun()
+                        else:
+                            # Simple mock auth for new users in this session
+                            st.session_state.user = {
+                                "name": email.split("@")[0].capitalize(),
+                                "email": email,
+                                "profileIcon": "Stethoscope",
+                                "profileColor": "#10B981",
+                                "dailyStreak": 5,
+                                "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
+                                "badges": [],
+                                "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
+                            }
+                            st.session_state.user_db[email] = st.session_state.user
+                            save_users()
+                            st.rerun()
+                    if st.button("Create an Account", use_container_width=True):
+                        st.session_state.auth_mode = "signup"
                         st.rerun()
-                    else:
-                        # Simple mock auth for new users in this session
+                else:
+                    st.markdown("### Create Account")
+                    name = st.text_input("Full Name", placeholder="Florence Nightingale")
+                    email = st.text_input("Email")
+                    password = st.text_input("Password", type="password")
+                    
+                    st.markdown("### Build Your Profile")
+                    
+                    # Visual Icon Selection
+                    st.write("Choose Your Icon")
+                    icon_cols = st.columns(5)
+                    selected_icon = st.session_state.get("temp_icon", "Stethoscope")
+                    for i, icon_name in enumerate(PROFILE_ICONS[:10]): # Show first 10 for brevity
+                        with icon_cols[i % 5]:
+                            if st.button(ICON_MAP[icon_name], key=f"icon_{icon_name}"):
+                                st.session_state.temp_icon = icon_name
+                                st.rerun()
+                    st.info(f"Selected Icon: {ICON_MAP[selected_icon]} {selected_icon}")
+                    
+                    # Visual Color Selection
+                    st.write("Choose Your Color")
+                    color_cols = st.columns(len(PROFILE_COLORS))
+                    selected_color = st.session_state.get("temp_color", "#10B981")
+                    for i, color_hex in enumerate(PROFILE_COLORS):
+                        with color_cols[i]:
+                            if st.button(" ", key=f"color_{color_hex}", help=color_hex):
+                                st.session_state.temp_color = color_hex
+                                st.rerun()
+                            st.markdown(f'<div style="width: 20px; height: 20px; background: {color_hex}; border-radius: 4px; margin-top: -35px; pointer-events: none;"></div>', unsafe_allow_html=True)
+                    st.markdown(f'Selected Color: <span style="color: {selected_color}; font-weight: bold;">{selected_color}</span>', unsafe_allow_html=True)
+                    
+                    if st.button("Sign Up", use_container_width=True, type="primary"):
                         st.session_state.user = {
-                            "name": email.split("@")[0].capitalize(),
+                            "name": name if name else "Florence Nightingale",
                             "email": email,
-                            "profileIcon": "Stethoscope",
-                            "profileColor": "#10B981",
-                            "dailyStreak": 5,
-                            "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
+                            "profileIcon": selected_icon,
+                            "profileColor": selected_color,
+                            "dailyStreak": 1,
+                            "activityCounts": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0, "Bedside Quiz": 0, "MAR Check": 0, "Stat Page": 0},
                             "badges": [],
-                            "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
+                            "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
                         }
                         st.session_state.user_db[email] = st.session_state.user
                         save_users()
                         st.rerun()
-                if st.button("Create an Account", use_container_width=True):
-                    st.session_state.auth_mode = "signup"
-                    st.rerun()
-            else:
-                st.markdown("### Create Account")
-                name = st.text_input("Full Name", placeholder="Florence Nightingale")
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                
-                st.markdown("### Build Your Profile")
-                
-                # Visual Icon Selection
-                st.write("Choose Your Icon")
-                icon_cols = st.columns(5)
-                selected_icon = st.session_state.get("temp_icon", "Stethoscope")
-                for i, icon_name in enumerate(PROFILE_ICONS[:10]): # Show first 10 for brevity
-                    with icon_cols[i % 5]:
-                        if st.button(ICON_MAP[icon_name], key=f"icon_{icon_name}"):
-                            st.session_state.temp_icon = icon_name
-                            st.rerun()
-                st.info(f"Selected Icon: {ICON_MAP[selected_icon]} {selected_icon}")
-                
-                # Visual Color Selection
-                st.write("Choose Your Color")
-                color_cols = st.columns(len(PROFILE_COLORS))
-                selected_color = st.session_state.get("temp_color", "#10B981")
-                for i, color_hex in enumerate(PROFILE_COLORS):
-                    with color_cols[i]:
-                        if st.button(" ", key=f"color_{color_hex}", help=color_hex):
-                            st.session_state.temp_color = color_hex
-                            st.rerun()
-                        st.markdown(f'<div style="width: 20px; height: 20px; background: {color_hex}; border-radius: 4px; margin-top: -35px; pointer-events: none;"></div>', unsafe_allow_html=True)
-                st.markdown(f'Selected Color: <span style="color: {selected_color}; font-weight: bold;">{selected_color}</span>', unsafe_allow_html=True)
-                
-                if st.button("Sign Up", use_container_width=True, type="primary"):
-                    st.session_state.user = {
-                        "name": name if name else "Florence Nightingale",
-                        "email": email,
-                        "profileIcon": selected_icon,
-                        "profileColor": selected_color,
-                        "dailyStreak": 1,
-                        "activityCounts": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0, "Bedside Quiz": 0, "MAR Check": 0, "Stat Page": 0},
-                        "badges": [],
-                        "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
-                    }
-                    st.session_state.user_db[email] = st.session_state.user
-                    save_users()
-                    st.rerun()
-                if st.button("Already have an account? Sign In", key="switch_to_login", use_container_width=True):
-                    st.session_state.auth_mode = "login"
-                    st.rerun()
+                    if st.button("Already have an account? Sign In", key="switch_to_login", use_container_width=True):
+                        st.session_state.auth_mode = "login"
+                        st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
         return
 
