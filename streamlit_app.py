@@ -109,8 +109,12 @@ def main():
     # Custom CSS
     st.markdown("""
     <style>
-    .stApp { background-color: #F5F5F0; }
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;600&display=swap');
+    
+    .stApp { background-color: #F5F5F0; font-family: 'Inter', sans-serif; }
     .stSidebar { background-color: white !important; border-right: 1px solid rgba(20, 20, 20, 0.1); }
+    
+    h1, h2, h3, .serif { font-family: 'Cormorant Garamond', serif !important; }
     
     /* Target the primary button to make it black with white text */
     div.stButton > button[kind="primary"] {
@@ -235,7 +239,7 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.markdown(f"<h1 style='font-family: Georgia; font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
         
         # Profile Area
         st.markdown(f"""
@@ -328,9 +332,23 @@ def main():
 
     # --- MAIN INTERFACE ---
     # Title and Subtitle always visible
-    st.title("🩺 OnCall")
-    st.markdown("### Your Nursing Study Assistant")
+    st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>🩺 OnCall: Nursing Study Assistant</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 1.4rem; color: #666; margin-top: 0; font-style: italic;'>Study & Learn with your OnCall Assistant</p>", unsafe_allow_html=True)
     
+    # Progress Tracking (Always at the top)
+    if st.session_state.clocked_in:
+        if mode == "Learn/Study":
+            total_time = 30 * 60
+            elapsed = time.time() - st.session_state.start_time
+            remaining = max(0, total_time - elapsed)
+            mins, secs = divmod(int(remaining), 60)
+            st.progress(min(1.0, elapsed / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
+        else:
+            progress = min(st.session_state.output_count * 10, 100)
+            st.progress(progress / 100, text=f"📊 Session Progress: {progress}%")
+    else:
+        st.progress(0, text="📊 Shift Not Started")
+
     if not st.session_state.clocked_in:
         st.markdown("<br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -338,7 +356,7 @@ def main():
             st.markdown("""
             <div style="text-align: center; padding: 40px; background: white; border-radius: 32px; border: 1px solid #eee; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
                 <div style="font-size: 60px; margin-bottom: 20px;">🩺</div>
-                <h2 style="font-family: Georgia; font-style: italic; font-size: 28px;">Ready to begin your clinical study session?</h2>
+                <h2 style="font-style: italic; font-size: 28px;">Ready to begin your clinical study session?</h2>
                 <p style="color: #666; margin-bottom: 20px; font-size: 16px;">
                     Choose your shift settings. To make our session even more effective, you can upload your own lecture notes or information in the sidebar.
                 </p>
@@ -354,17 +372,6 @@ def main():
                 st.session_state.messages.append({"role": "assistant", "content": f"Clocked-in for {course} - {module}. How can I help you today?"})
                 st.rerun()
     else:
-        # Progress Tracking
-        if mode == "Learn/Study":
-            total_time = 30 * 60
-            elapsed = time.time() - st.session_state.start_time
-            remaining = max(0, total_time - elapsed)
-            mins, secs = divmod(int(remaining), 60)
-            st.progress(min(1.0, elapsed / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
-        else:
-            progress = min(st.session_state.output_count * 10, 100)
-            st.progress(progress / 100, text=f"📊 Session Progress: {progress}%")
-
         # Handle Pop-up Quizzes (Only in Learn/Study)
         if st.session_state.active_quiz:
             with st.container(border=True):
