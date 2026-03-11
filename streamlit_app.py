@@ -115,6 +115,7 @@ def main():
     .stSidebar { background-color: white !important; border-right: 1px solid rgba(20, 20, 20, 0.1); }
     
     h1, h2, h3, .serif { font-family: 'Cormorant Garamond', serif !important; }
+    .fancy-italic { font-family: 'Cormorant Garamond', serif !important; font-style: italic !important; }
     
     /* Target the primary button to make it black with white text */
     div.stButton > button[kind="primary"] {
@@ -292,14 +293,7 @@ def main():
         
         st.divider()
         
-        # Enterprise API Key Option
-        with st.expander("Enterprise / University Settings"):
-            st.info("If you have a university Gemini API key, enter it here to bypass shared limits.")
-            st.session_state.custom_api_key = st.text_input("University API Key", value=st.session_state.custom_api_key, type="password")
-            if st.session_state.custom_api_key:
-                genai.configure(api_key=st.session_state.custom_api_key)
-        
-        if st.button("Achievements", use_container_width=True):
+        if st.button("🏆 Achievements", use_container_width=True):
             st.session_state.show_badges = True
             st.rerun()
         
@@ -324,7 +318,11 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.divider()
-        if st.button("Sign Out", use_container_width=True):
+        
+        if st.button("👤 My Account", use_container_width=True):
+            st.info("Account settings coming soon!")
+            
+        if st.button("🚪 Sign Out", use_container_width=True):
             st.session_state.user = None
             st.session_state.clocked_in = False
             st.session_state.messages = []
@@ -332,8 +330,16 @@ def main():
 
     # --- MAIN INTERFACE ---
     # Title and Subtitle always visible
-    st.markdown("<h1 style='font-size: 3rem; margin-bottom: 0;'>🩺 OnCall: Nursing Study Assistant</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 1.4rem; color: #666; margin-top: 0; font-style: italic;'>Study & Learn with your OnCall Assistant</p>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style="margin-bottom: 2rem;">
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; line-height: 1; margin-bottom: 0.5rem; font-weight: 400;">
+                🩺 OnCall: <span class="fancy-italic">Nursing Study Assistant</span>
+            </h1>
+            <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: #666; margin-top: 0; font-style: italic; font-weight: 300;">
+                Study & Learn with your OnCall Assistant
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
     
     # Progress Tracking (Always at the top)
     if st.session_state.clocked_in:
