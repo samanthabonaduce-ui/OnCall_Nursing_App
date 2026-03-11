@@ -114,6 +114,16 @@ def main():
     .stApp { background-color: #F5F5F0; font-family: 'Inter', sans-serif; }
     .stSidebar { background-color: white !important; border-right: 1px solid rgba(20, 20, 20, 0.1); }
     
+    /* Sticky Progress Bar */
+    [data-testid="stVerticalBlock"] > div:has(div.stProgress) {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background-color: #F5F5F0;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    
     h1, h2, h3, .serif { font-family: 'Cormorant Garamond', serif !important; }
     .fancy-italic { font-family: 'Cormorant Garamond', serif !important; font-style: italic !important; }
     
@@ -149,6 +159,16 @@ def main():
     """, unsafe_allow_html=True)
 
     # Initialize session state
+    if "user_db" not in st.session_state:
+        if os.path.exists("users.json"):
+            try:
+                with open("users.json", "r") as f:
+                    st.session_state.user_db = json.load(f)
+            except:
+                st.session_state.user_db = {}
+        else:
+            st.session_state.user_db = {}
+
     if "user" not in st.session_state: st.session_state.user = None
     if "auth_mode" not in st.session_state: st.session_state.auth_mode = "login"
     if "messages" not in st.session_state: st.session_state.messages = []
@@ -156,6 +176,50 @@ def main():
     if "output_count" not in st.session_state: st.session_state.output_count = 0
     if "start_time" not in st.session_state: st.session_state.start_time = None
     if "active_quiz" not in st.session_state: st.session_state.active_quiz = None
+    if "quiz_step" not in st.session_state: st.session_state.quiz_step = 0
+    if "quiz_data" not in st.session_state: st.session_state.quiz_data = None
+    if "quiz_score" not in st.session_state: st.session_state.quiz_score = 0
+    if "quiz_results" not in st.session_state: st.session_state.quiz_results = []
+    if "last_trigger_check" not in st.session_state: st.session_state.last_trigger_check = -1
+    if "stat_times" not in st.session_state: st.session_state.stat_times = []
+
+    def save_users():
+        with open("users.json", "w") as f:
+            json.dump(st.session_state.user_db, f)
+
+    @st.dialog("🧮 Clinical Calculator")
+    def show_calculator():
+        st.write("Basic Dosage Calculator")
+        if "calc_val" not in st.session_state: st.session_state.calc_val = "0"
+        
+        st.markdown(f"""
+        <div style="background: #eee; padding: 20px; border-radius: 10px; text-align: right; font-size: 24px; font-family: monospace; margin-bottom: 10px;">
+            {st.session_state.calc_val}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        cols = st.columns(4)
+        buttons = [
+            "7", "8", "9", "/",
+            "4", "5", "6", "*",
+            "1", "2", "3", "-",
+            "C", "0", "=", "+"
+        ]
+        
+        for i, btn in enumerate(buttons):
+            with cols[i % 4]:
+                if st.button(btn, key=f"calc_{btn}", use_container_width=True):
+                    if btn == "C": st.session_state.calc_val = "0"
+                    elif btn == "=":
+                        try: st.session_state.calc_val = str(eval(st.session_state.calc_val))
+                        except: st.session_state.calc_val = "Error"
+                    else:
+                        if st.session_state.calc_val == "0": st.session_state.calc_val = btn
+                        else: st.session_state.calc_val += btn
+                    st.rerun()
+        
+        if st.button("Close", use_container_width=True):
+            st.rerun()
 
     @st.dialog("🏅 Your Achievements")
     def show_achievements_dialog():
@@ -206,23 +270,108 @@ def main():
             st.success("Profile updated!")
             st.rerun()
 
-    @st.dialog("🚨 Clinical Alert")
+    @st.dialog("🚨 Clinical Alert", width="large")
     def show_quiz_dialog(quiz_type):
-        st.warning(f"Immediate attention required: {quiz_type}")
-        st.write("Based on the current patient scenario, what is your priority action?")
-        ans = st.text_input("Your clinical response...", key="quiz_input")
-        if st.button("Submit Action"):
-            if len(ans) > 5: # Simple validation for "correctness"
+        if not st.session_state.quiz_data:
+            with st.spinner("Generating clinical scenario..."):
+                context = "\n".join([m["content"] for m in st.session_state.messages[-5:]])
+                prompt = f"""Generate a {quiz_type} for a nursing student. 
+                Context of current study: {context}
+                
+                Requirements for {quiz_type}:
+                - Bedside Quiz: 2 comprehension level NCLEX MCQs.
+                - MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education.
+                - STAT Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA.
+                
+                Return JSON format:
+                {{
+                    "scenario": "string (optional)",
+                    "questions": [
+                        {{
+                            "type": "MCQ" or "SATA" or "Fill",
+                            "question": "string",
+                            "options": ["A", "B", "C", "D"],
+                            "answer": "string or list",
+                            "rationale": "string"
+                        }}
+                    ]
+                }}"""
+                
+                try:
+                    model = genai.GenerativeModel('gemini-3-flash-preview')
+                    response = model.generate_content(prompt)
+                    json_str = response.text.strip()
+                    if "```json" in json_str:
+                        json_str = json_str.split("```json")[1].split("```")[0].strip()
+                    st.session_state.quiz_data = json.loads(json_str)
+                    st.session_state.quiz_step = 0
+                    st.session_state.quiz_score = 0
+                    st.session_state.quiz_results = []
+                except Exception as e:
+                    st.error(f"Failed to generate quiz: {e}")
+                    if st.button("Close"): st.session_state.active_quiz = None; st.rerun()
+                    return
+
+        data = st.session_state.quiz_data
+        step = st.session_state.quiz_step
+        
+        if step < len(data["questions"]):
+            q = data["questions"][step]
+            if data.get("scenario") and step == 0:
+                st.info(f"**Scenario:** {data['scenario']}")
+            
+            st.markdown(f"### Question {step + 1}")
+            st.write(q["question"])
+            
+            user_ans = None
+            if q["type"] == "MCQ":
+                user_ans = st.radio("Select the best option:", q["options"], key=f"q_{step}")
+            elif q["type"] == "SATA":
+                user_ans = []
+                for opt in q["options"]:
+                    if st.checkbox(opt, key=f"q_{step}_{opt}"):
+                        user_ans.append(opt)
+            elif q["type"] == "Fill":
+                user_ans = st.text_input("Enter your calculation:", key=f"q_{step}")
+
+            if st.button("Check Answer" if q["type"] != "Fill" else "Verify Calculation"):
+                is_correct = False
+                if q["type"] == "MCQ": is_correct = (user_ans == q["answer"])
+                elif q["type"] == "SATA": is_correct = (set(user_ans) == set(q["answer"]))
+                elif q["type"] == "Fill": is_correct = (user_ans.strip() == str(q["answer"]).strip())
+                
+                if is_correct:
+                    st.success("✅ Correct!")
+                    st.session_state.quiz_score += 1
+                else:
+                    st.error(f"❌ Incorrect. The correct answer was: {q['answer']}")
+                
+                st.markdown(f"**Rationale:** {q['rationale']}")
+                st.session_state.quiz_results.append(is_correct)
+                
+                if step < len(data["questions"]) - 1:
+                    if st.button("Next Question"):
+                        st.session_state.quiz_step += 1
+                        st.rerun()
+                else:
+                    if st.button("Submit Quiz"):
+                        st.session_state.quiz_step = 99 # Final screen
+                        st.rerun()
+        else:
+            st.balloons() if st.session_state.quiz_score == len(data["questions"]) else None
+            st.markdown(f"## Quiz Complete!")
+            st.markdown(f"### Final Score: {st.session_state.quiz_score} / {len(data['questions'])}")
+            
+            if st.session_state.quiz_score == len(data["questions"]):
                 st.session_state.user['activityCounts'][quiz_type] = st.session_state.user['activityCounts'].get(quiz_type, 0) + 1
+                st.session_state.user_db[st.session_state.user['email']] = st.session_state.user
+                save_users()
+                st.success(f"Perfect score! Progress recorded for {quiz_type}.")
+            
+            if st.button("Return to Shift", use_container_width=True, type="primary"):
                 st.session_state.active_quiz = None
-                st.success("Correct priority identified! Activity recorded.")
-                new_badges = check_badges(st.session_state.user)
-                for b in new_badges:
-                    st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
-                time.sleep(1)
+                st.session_state.quiz_data = None
                 st.rerun()
-            else:
-                st.error("Please provide a more detailed clinical rationale.")
 
     # --- AUTHENTICATION FLOW ---
     if not st.session_state.user:
@@ -245,18 +394,25 @@ def main():
                 email = st.text_input("Email")
                 password = st.text_input("Password", type="password")
                 if st.button("Sign In", use_container_width=True, type="primary"):
-                    # Simple mock auth
-                    st.session_state.user = {
-                        "name": email.split("@")[0].capitalize(),
-                        "email": email,
-                        "profileIcon": "Stethoscope",
-                        "profileColor": "#10B981",
-                        "dailyStreak": 5,
-                        "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
-                        "badges": [],
-                        "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
-                    }
-                    st.rerun()
+                    if email in st.session_state.user_db:
+                        st.session_state.user = st.session_state.user_db[email]
+                        st.success("Welcome back!")
+                        st.rerun()
+                    else:
+                        # Simple mock auth for new users in this session
+                        st.session_state.user = {
+                            "name": email.split("@")[0].capitalize(),
+                            "email": email,
+                            "profileIcon": "Stethoscope",
+                            "profileColor": "#10B981",
+                            "dailyStreak": 5,
+                            "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
+                            "badges": [],
+                            "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
+                        }
+                        st.session_state.user_db[email] = st.session_state.user
+                        save_users()
+                        st.rerun()
                 if st.button("Create an Account", use_container_width=True):
                     st.session_state.auth_mode = "signup"
                     st.rerun()
@@ -302,6 +458,8 @@ def main():
                         "badges": [],
                         "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
                     }
+                    st.session_state.user_db[email] = st.session_state.user
+                    save_users()
                     st.rerun()
                 if st.button("Already have an account? Sign In", key="switch_to_login", use_container_width=True):
                     st.session_state.auth_mode = "login"
@@ -396,6 +554,9 @@ def main():
         
         if st.button("👤 My Account", use_container_width=True):
             show_account_dialog()
+        
+        if st.button("🧮 Calculator", use_container_width=True):
+            show_calculator()
             
         if st.button("🚪 Sign Out", use_container_width=True):
             st.session_state.user = None
@@ -418,12 +579,36 @@ def main():
     
     # Progress Tracking (Always at the top)
     if st.session_state.clocked_in:
+        elapsed_total = time.time() - st.session_state.start_time
+        mins_total = int(elapsed_total // 60)
+        
+        # Timer Logic for Quizzes
+        if mode == "Learn/Study":
+            # Bedside: 5, 15, 25
+            # MAR: 10, 20, 30
+            # STAT: 3 random times
+            import random
+            if not st.session_state.stat_times:
+                st.session_state.stat_times = sorted([random.randint(1, 29) for _ in range(3)])
+            
+            current_min = mins_total
+            if current_min > st.session_state.last_trigger_check:
+                st.session_state.last_trigger_check = current_min
+                
+                trigger = None
+                if current_min in [10, 20, 30]: trigger = "MAR Check"
+                elif current_min in [5, 15, 25]: trigger = "Bedside Quiz"
+                elif current_min in st.session_state.stat_times: trigger = "Stat Page"
+                
+                if trigger:
+                    st.session_state.active_quiz = trigger
+                    st.rerun()
+
         if mode == "Learn/Study":
             total_time = 30 * 60
-            elapsed = time.time() - st.session_state.start_time
-            remaining = max(0, total_time - elapsed)
+            remaining = max(0, total_time - elapsed_total)
             mins, secs = divmod(int(remaining), 60)
-            st.progress(min(1.0, elapsed / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
+            st.progress(min(1.0, elapsed_total / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
         else:
             progress = min(st.session_state.output_count * 10, 100)
             st.progress(progress / 100, text=f"📊 Session Progress: {progress}%")
