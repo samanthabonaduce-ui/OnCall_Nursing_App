@@ -157,13 +157,88 @@ def main():
     if "start_time" not in st.session_state: st.session_state.start_time = None
     if "active_quiz" not in st.session_state: st.session_state.active_quiz = None
 
+    @st.dialog("🏅 Your Achievements")
+    def show_achievements_dialog():
+        user = st.session_state.user
+        if not user['badges']:
+            st.write("No badges earned yet. Keep studying!")
+        else:
+            cols = st.columns(3)
+            for i, b in enumerate(user['badges']):
+                with cols[i % 3]:
+                    st.markdown(f"""
+                    <div class="badge-card">
+                        <div style="font-size: 30px;">{b['icon']}</div>
+                        <div style="font-weight: bold; font-size: 14px;">{b['title']}</div>
+                        <div style="font-size: 10px; color: #888;">{b['dateEarned']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        if st.button("Close", use_container_width=True):
+            st.rerun()
+
+    @st.dialog("👤 My Account")
+    def show_account_dialog():
+        user = st.session_state.user
+        st.subheader("Edit Profile")
+        new_name = st.text_input("Full Name", value=user['name'])
+        st.text_input("Email Address", value=user['email'], disabled=True)
+        
+        st.write("Choose Your Icon")
+        icon_cols = st.columns(5)
+        for i, icon_name in enumerate(PROFILE_ICONS[:10]):
+            with icon_cols[i % 5]:
+                if st.button(ICON_MAP[icon_name], key=f"dialog_icon_{icon_name}"):
+                    user['profileIcon'] = icon_name
+                    st.rerun()
+        st.info(f"Current Icon: {ICON_MAP[user['profileIcon']]} {user['profileIcon']}")
+
+        st.write("Choose Your Color")
+        color_cols = st.columns(len(PROFILE_COLORS))
+        for i, color_hex in enumerate(PROFILE_COLORS):
+            with color_cols[i]:
+                if st.button(" ", key=f"dialog_color_{color_hex}"):
+                    user['profileColor'] = color_hex
+                    st.rerun()
+                st.markdown(f'<div style="width: 20px; height: 20px; background: {color_hex}; border-radius: 4px; margin-top: -35px; pointer-events: none;"></div>', unsafe_allow_html=True)
+        
+        if st.button("Save Changes", use_container_width=True, type="primary"):
+            user['name'] = new_name
+            st.success("Profile updated!")
+            st.rerun()
+
+    @st.dialog("🚨 Clinical Alert")
+    def show_quiz_dialog(quiz_type):
+        st.warning(f"Immediate attention required: {quiz_type}")
+        st.write("Based on the current patient scenario, what is your priority action?")
+        ans = st.text_input("Your clinical response...", key="quiz_input")
+        if st.button("Submit Action"):
+            if len(ans) > 5: # Simple validation for "correctness"
+                st.session_state.user['activityCounts'][quiz_type] = st.session_state.user['activityCounts'].get(quiz_type, 0) + 1
+                st.session_state.active_quiz = None
+                st.success("Correct priority identified! Activity recorded.")
+                new_badges = check_badges(st.session_state.user)
+                for b in new_badges:
+                    st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Please provide a more detailed clinical rationale.")
+
     # --- AUTHENTICATION FLOW ---
     if not st.session_state.user:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("<div style='text-align: center; padding: 40px;'>", unsafe_allow_html=True)
-            st.title("🩺 OnCall")
-            st.subheader("Your Nursing Study Assistant")
+            st.markdown("""
+                <div style="margin-bottom: 2rem;">
+                    <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; line-height: 1; margin-bottom: 0.5rem; font-weight: 400;">
+                        OnCall: <span class="fancy-italic">Nursing Study Assistant</span>
+                    </h1>
+                    <p style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: #666; margin-top: 0; font-style: italic; font-weight: 300;">
+                        Study & Learn with your OnCall Assistant
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
             
             if st.session_state.auth_mode == "login":
                 st.markdown("### Welcome Back")
@@ -240,7 +315,11 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.markdown(f"<h1 style='font-style: italic;'>OnCall Assistant</h1>", unsafe_allow_html=True)
+        st.markdown("""
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; line-height: 1.1; margin-bottom: 1rem; font-weight: 400; font-style: italic;">
+                OnCall: Nursing Study Assistant
+            </h1>
+        """, unsafe_allow_html=True)
         
         # Profile Area
         st.markdown(f"""
@@ -275,27 +354,8 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        st.divider()
-        
-        # File Upload Area
-        st.header("Study Materials")
-        uploaded_files = st.file_uploader("Upload Lecture Notes (PDF/TXT)", accept_multiple_files=True)
-        if uploaded_files:
-            st.success(f"{len(uploaded_files)} files ready for session.")
-
-        st.divider()
-        st.header("Shift Settings")
-        course = st.selectbox("Nursing Course", COURSES)
-        modules = COURSE_MODULES.get(course, [])
-        module = st.selectbox("Course Module", modules) if modules else "General Study"
-        mode = st.selectbox("Learning Mode", ["Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
-        level = st.selectbox("Learner Level", ["Beginner", "Intermediate", "Advanced"])
-        
-        st.divider()
-        
         if st.button("🏆 Achievements", use_container_width=True):
-            st.session_state.show_badges = True
-            st.rerun()
+            show_achievements_dialog()
         
         st.subheader("Leaderboard")
         l_mode = st.selectbox("Rank by", ["Daily Streak", "Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
@@ -318,9 +378,24 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.divider()
+        st.header("Shift Settings")
+        course = st.selectbox("Nursing Course", COURSES)
+        modules = COURSE_MODULES.get(course, [])
+        module = st.selectbox("Course Module", modules) if modules else "General Study"
+        mode = st.selectbox("Learning Mode", ["Learn/Study", "Drill/Quiz", "Evaluate/Exam", "Simulation/Case"])
+        level = st.selectbox("Learner Level", ["Beginner", "Intermediate", "Advanced"])
+
+        st.divider()
+        # File Upload Area
+        st.header("Study Materials")
+        uploaded_files = st.file_uploader("Upload Lecture Notes (PDF/TXT)", accept_multiple_files=True)
+        if uploaded_files:
+            st.success(f"{len(uploaded_files)} files ready for session.")
+
+        st.divider()
         
         if st.button("👤 My Account", use_container_width=True):
-            st.info("Account settings coming soon!")
+            show_account_dialog()
             
         if st.button("🚪 Sign Out", use_container_width=True):
             st.session_state.user = None
@@ -380,14 +455,7 @@ def main():
     else:
         # Handle Pop-up Quizzes (Only in Learn/Study)
         if st.session_state.active_quiz:
-            with st.container(border=True):
-                st.warning(f"🚨 Clinical Alert: {st.session_state.active_quiz}")
-                st.write("The patient requires immediate attention. Please answer the following:")
-                st.text_input("Your response...")
-                if st.button("Submit Clinical Action"):
-                    st.session_state.active_quiz = None
-                    st.success("Action recorded. Continuing session.")
-                    st.rerun()
+            show_quiz_dialog(st.session_state.active_quiz)
 
         # Chat Display
         for message in st.session_state.messages:
@@ -415,44 +483,23 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                     st.session_state.output_count += 1
                     
-                    # Update Stats & Check Badges
-                    user['activityCounts'][mode] = user['activityCounts'].get(mode, 0) + 1
-                    new_badges = check_badges(user)
-                    for b in new_badges:
-                        st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
+                    # Update Stats (Inputs only, badges now use correct answers from quizzes)
+                    # user['activityCounts'][mode] = user['activityCounts'].get(mode, 0) + 1
+                    # new_badges = check_badges(user)
+                    # for b in new_badges:
+                    #     st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
                     
                     # Trigger Pop-ups (Only in Learn/Study)
                     if mode == "Learn/Study":
                         if st.session_state.output_count % 10 == 0:
-                            st.session_state.active_quiz = "MAR Check Required"
+                            st.session_state.active_quiz = "MAR Check"
                             st.rerun()
                         elif st.session_state.output_count % 5 == 0:
-                            st.session_state.active_quiz = "Bedside Quiz Triggered"
+                            st.session_state.active_quiz = "Bedside Quiz"
                             st.rerun()
                             
                 except Exception as e:
                     st.error(f"Error: {e}")
-
-    # Achievement Modal Simulation
-    if st.session_state.get("show_badges"):
-        with st.container(border=True):
-            st.subheader("🏅 Your Achievements")
-            if not user['badges']:
-                st.write("No badges earned yet. Keep studying!")
-            else:
-                cols = st.columns(3)
-                for i, b in enumerate(user['badges']):
-                    with cols[i % 3]:
-                        st.markdown(f"""
-                        <div class="badge-card">
-                            <div style="font-size: 30px;">{b['icon']}</div>
-                            <div style="font-weight: bold; font-size: 14px;">{b['title']}</div>
-                            <div style="font-size: 10px; color: #888;">{b['dateEarned']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            if st.button("Close Achievements"):
-                st.session_state.show_badges = False
-                st.rerun()
 
 if __name__ == "__main__":
     main()
