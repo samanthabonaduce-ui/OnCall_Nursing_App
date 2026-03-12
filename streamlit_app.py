@@ -73,29 +73,28 @@ ICON_MAP = {
 }
 
 def check_badges(user):
-    badge_criteria = [
-        {"type": "Learn/Study", "threshold": 5, "title": "Study Scholar", "icon": "📖"},
-        {"type": "Drill/Quiz", "threshold": 5, "title": "Quiz Master", "icon": "📋"},
-        {"type": "Evaluate/Exam", "threshold": 5, "title": "Exam Expert", "icon": "📄"},
-        {"type": "Simulation/Case", "threshold": 5, "title": "Clinical Pro", "icon": "🩺"},
-        {"type": "Bedside Quiz", "threshold": 5, "title": "Bedside Ace", "icon": "⚡"},
-        {"type": "MAR Check", "threshold": 5, "title": "Safety First", "icon": "💊"},
-        {"type": "Stat Page", "threshold": 5, "title": "Rapid Responder", "icon": "🔥"},
-    ]
+    types = ["Bedside Report", "MAR Check", "Stat Page", "Study Session"]
     
     new_badges = []
-    for criteria in badge_criteria:
-        count = user['activityCounts'].get(criteria['type'], 0)
-        if count > 0 and count % criteria['threshold'] == 0:
-            badge_id = f"{criteria['type']}-{count}"
+    for t in types:
+        count = user['activityCounts'].get(t, 0)
+        if count > 0:
+            # Level-up system: Badge for every completion
+            badge_id = f"{t}-Level-{count}"
             if not any(b['id'] == badge_id for b in user['badges']):
+                icon_map = {
+                    "Bedside Report": "🛏️",
+                    "MAR Check": "💉",
+                    "Stat Page": "🚨",
+                    "Study Session": "📖"
+                }
                 new_badge = {
                     "id": badge_id,
-                    "title": criteria['title'],
-                    "description": f"Completed {count} {criteria['type']} activities",
+                    "title": f"{t} Badge - Level {count}",
+                    "description": f"Achieved Level {count} in {t}",
                     "count": count,
                     "dateEarned": datetime.now().strftime("%Y-%m-%d"),
-                    "icon": criteria['icon']
+                    "icon": icon_map.get(t, "🏅")
                 }
                 new_badges.append(new_badge)
     
@@ -275,7 +274,7 @@ def main():
     def show_quiz_dialog(quiz_type):
         # Quiz UI Config
         quiz_configs = {
-            "Bedside Quiz": {"icon": "🛏️", "color": "#3B82F6", "scenario": False},
+            "Bedside Report": {"icon": "🛏️", "color": "#3B82F6", "scenario": False},
             "MAR Check": {"icon": "💉", "color": "#F59E0B", "scenario": True},
             "Stat Page": {"icon": "🚨", "color": "#EF4444", "scenario": True}
         }
@@ -288,10 +287,15 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
+        # Calculator only for MAR Check
+        if quiz_type == "MAR Check":
+            if st.button("🧮 Open Calculator"):
+                show_calculator()
+
         if not st.session_state.quiz_data:
             with st.spinner("Generating clinical scenario..."):
                 context = "\n".join([m["content"] for m in st.session_state.messages[-5:]])
-                # Bedside Quiz: 2 comprehension level NCLEX MCQs.
+                # Bedside Report: 2 comprehension level NCLEX MCQs.
                 # MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education.
                 # STAT Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA.
                 
@@ -299,7 +303,7 @@ def main():
                 Context of current study: {context}
                 
                 Requirements for {quiz_type}:
-                {"- Bedside Quiz: 2 comprehension level NCLEX MCQs. No patient scenario." if quiz_type == "Bedside Quiz" else ""}
+                {"- Bedside Report: 2 comprehension level NCLEX MCQs. No patient scenario." if quiz_type == "Bedside Report" else ""}
                 {"- MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education. Include a patient scenario." if quiz_type == "MAR Check" else ""}
                 {"- Stat Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA." if quiz_type == "Stat Page" else ""}
                 
@@ -399,6 +403,11 @@ def main():
                 st.session_state.user_db[st.session_state.user['email']] = st.session_state.user
                 save_users()
                 st.success(f"Perfect score! Progress recorded for {quiz_type}.")
+                
+                # Check for new badges
+                new_badges = check_badges(st.session_state.user)
+                for b in new_badges:
+                    st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
             else:
                 st.warning("Only 100% correct quizzes are added to your total count. Keep practicing!")
             
@@ -442,7 +451,7 @@ def main():
                                 "profileIcon": "Stethoscope",
                                 "profileColor": "#10B981",
                                 "dailyStreak": 5,
-                                "activityCounts": {"Learn/Study": 12, "Drill/Quiz": 8, "MAR Check": 3, "Stat Page": 2},
+                                "activityCounts": {"Study Session": 12, "Bedside Report": 8, "MAR Check": 3, "Stat Page": 2},
                                 "badges": [],
                                 "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
                             }
@@ -490,7 +499,7 @@ def main():
                             "profileIcon": selected_icon,
                             "profileColor": selected_color,
                             "dailyStreak": 1,
-                            "activityCounts": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0, "Bedside Quiz": 0, "MAR Check": 0, "Stat Page": 0},
+                            "activityCounts": {"Study Session": 0, "Bedside Report": 0, "MAR Check": 0, "Stat Page": 0},
                             "badges": [],
                             "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
                         }
@@ -529,20 +538,20 @@ def main():
             </div>
             <div class="streak-grid">
                 <div class="streak-card">
-                    <div class="streak-label">Study</div>
-                    <div class="streak-val">📖 {user['activityCounts'].get("Learn/Study", 0)}</div>
+                    <div class="streak-label">Bedside Report</div>
+                    <div class="streak-val">🛏️ {user['activityCounts'].get("Bedside Report", 0)}</div>
                 </div>
                 <div class="streak-card">
-                    <div class="streak-label">Quiz</div>
-                    <div class="streak-val">📋 {user['activityCounts'].get("Drill/Quiz", 0)}</div>
+                    <div class="streak-label">Study Sessions</div>
+                    <div class="streak-val">📖 {user['activityCounts'].get("Study Session", 0)}</div>
                 </div>
                 <div class="streak-card">
-                    <div class="streak-label">MAR</div>
-                    <div class="streak-val">💊 {user['activityCounts'].get("MAR Check", 0)}</div>
+                    <div class="streak-label">MAR Checks</div>
+                    <div class="streak-val">💉 {user['activityCounts'].get("MAR Check", 0)}</div>
                 </div>
                 <div class="streak-card">
-                    <div class="streak-label">Stat</div>
-                    <div class="streak-val">🔥 {user['activityCounts'].get("Stat Page", 0)}</div>
+                    <div class="streak-label">STAT Pages</div>
+                    <div class="streak-val">🚨 {user['activityCounts'].get("Stat Page", 0)}</div>
                 </div>
             </div>
         </div>
@@ -590,9 +599,6 @@ def main():
         
         if st.button("👤 My Account", use_container_width=True):
             show_account_dialog()
-        
-        if st.button("🧮 Calculator", use_container_width=True):
-            show_calculator()
             
         if st.button("🚪 Sign Out", use_container_width=True):
             st.session_state.user = None
@@ -603,7 +609,7 @@ def main():
     # --- MAIN INTERFACE ---
     # Title and Subtitle always visible
     st.markdown("""
-        <div style="margin-bottom: 2rem;">
+        <div style="margin-bottom: 2rem; text-align: center;">
             <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; line-height: 1; margin-bottom: 0.5rem; font-weight: 400;">
                 🩺 <i>OnCall</i>: <span class="fancy-italic">Nursing Study Assistant</span>
             </h1>
@@ -633,7 +639,7 @@ def main():
                 
                 trigger = None
                 if current_min in [10, 20, 30]: trigger = "MAR Check"
-                elif current_min in [5, 15, 25]: trigger = "Bedside Quiz"
+                elif current_min in [5, 15, 25]: trigger = "Bedside Report"
                 elif current_min in st.session_state.stat_times: trigger = "Stat Page"
                 
                 if trigger:
@@ -643,6 +649,17 @@ def main():
         if mode == "Learn/Study":
             total_time = 30 * 60
             remaining = max(0, total_time - elapsed_total)
+            
+            # Check for session completion (30 mins)
+            if remaining == 0 and not st.session_state.get("session_completed", False):
+                st.session_state.session_completed = True
+                st.session_state.user['activityCounts']["Study Session"] = st.session_state.user['activityCounts'].get("Study Session", 0) + 1
+                save_users()
+                new_badges = check_badges(st.session_state.user)
+                for b in new_badges:
+                    st.toast(f"🏆 New Badge: {b['title']}!", icon="🎉")
+                st.success("Congratulations! You've completed a 30-minute study session and earned a badge!")
+
             mins, secs = divmod(int(remaining), 60)
             st.progress(min(1.0, elapsed_total / total_time), text=f"⏱️ Session Time Remaining: {mins}:{secs:02d}")
         else:
@@ -731,7 +748,7 @@ def main():
                             st.session_state.active_quiz = "MAR Check"
                             st.rerun()
                         elif st.session_state.output_count % 5 == 0:
-                            st.session_state.active_quiz = "Bedside Quiz"
+                            st.session_state.active_quiz = "Bedside Report"
                             st.rerun()
                             
                 except Exception as e:
