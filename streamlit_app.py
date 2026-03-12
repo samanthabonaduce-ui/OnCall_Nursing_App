@@ -76,23 +76,24 @@ def check_badges(user):
     types = ["Bedside Report", "MAR Check", "Stat Page", "Study Session"]
     
     new_badges = []
+    icon_map = {
+        "Bedside Report": "🛏️",
+        "MAR Check": "💉",
+        "Stat Page": "🚨",
+        "Study Session": "📖"
+    }
+    
     for t in types:
         count = user['activityCounts'].get(t, 0)
-        if count > 0:
-            # Level-up system: Badge for every completion
-            badge_id = f"{t}-Level-{count}"
+        # Retrospective check: Ensure all levels up to current count are awarded
+        for level in range(1, count + 1):
+            badge_id = f"{t}-Level-{level}"
             if not any(b['id'] == badge_id for b in user['badges']):
-                icon_map = {
-                    "Bedside Report": "🛏️",
-                    "MAR Check": "💉",
-                    "Stat Page": "🚨",
-                    "Study Session": "📖"
-                }
                 new_badge = {
                     "id": badge_id,
-                    "title": f"{t} Badge - Level {count}",
-                    "description": f"Achieved Level {count} in {t}",
-                    "count": count,
+                    "title": f"{t} Badge - Level {level}",
+                    "description": f"Achieved Level {level} in {t}",
+                    "count": level,
                     "dateEarned": datetime.now().strftime("%Y-%m-%d"),
                     "icon": icon_map.get(t, "🏅")
                 }
@@ -104,7 +105,7 @@ def check_badges(user):
     return []
 
 def main():
-    st.set_page_config(page_title="OnCall: Nursing Study Assistant", page_icon="🩺", layout="wide")
+    st.set_page_config(page_title="OnCall: Nursing Study Assistant", page_icon="🩺", layout="wide", initial_sidebar_state="auto")
     
     # Custom CSS
     st.markdown("""
@@ -114,14 +115,21 @@ def main():
     .stApp { background-color: #F5F5F0; font-family: 'Inter', sans-serif; }
     .stSidebar { background-color: white !important; border-right: 1px solid rgba(20, 20, 20, 0.1); }
     
-    /* Sticky Progress Bar */
-    [data-testid="stVerticalBlock"] > div:has(div.stProgress) {
-        position: sticky;
+    /* Fixed Header for Progress Bar */
+    div[data-testid="stProgress"] {
+        position: fixed;
         top: 0;
-        z-index: 999;
+        left: 0;
+        right: 0;
+        z-index: 1000;
         background-color: #F5F5F0;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    /* Adjust main content to not be hidden by fixed header */
+    .main .block-container {
+        padding-top: 80px !important;
     }
     
     h1, h2, h3, .serif { font-family: 'Cormorant Garamond', serif !important; }
@@ -307,6 +315,10 @@ def main():
                 {"- MAR Check: 1 dosage calculation (fill in the blank) + 1 NCLEX MCQ on patient education. Include a patient scenario." if quiz_type == "MAR Check" else ""}
                 {"- Stat Page: A small patient scenario followed by 1 application level NCLEX MCQ/SATA and 1 analysis level NCLEX MCQ/SATA." if quiz_type == "Stat Page" else ""}
                 
+                CRITICAL: The 'answer' field MUST be the EXACT string (including any prefix like 'A.') from the 'options' list for MCQ.
+                For SATA, 'answer' MUST be a list of EXACT strings from 'options'.
+                For 'Fill', the 'answer' should be a string representing the numerical value or the exact expected text.
+                
                 Return JSON format:
                 {{
                     "scenario": "string (required if specified)",
@@ -363,9 +375,12 @@ def main():
             if not st.session_state.quiz_answered:
                 if st.button("Submit Answer"):
                     is_correct = False
-                    if q["type"] == "MCQ": is_correct = (user_ans == q["answer"])
-                    elif q["type"] == "SATA": is_correct = (set(user_ans) == set(q["answer"]))
-                    elif q["type"] == "Fill": is_correct = (user_ans.strip() == str(q["answer"]).strip())
+                    if q["type"] == "MCQ": 
+                        is_correct = (str(user_ans).strip().lower() == str(q["answer"]).strip().lower())
+                    elif q["type"] == "SATA": 
+                        is_correct = (set([str(a).strip().lower() for a in user_ans]) == set([str(a).strip().lower() for a in q["answer"]]))
+                    elif q["type"] == "Fill": 
+                        is_correct = (str(user_ans).strip().lower() == str(q["answer"]).strip().lower())
                     
                     st.session_state.quiz_answered = True
                     if is_correct:
@@ -440,24 +455,18 @@ def main():
                     password = st.text_input("Password", type="password")
                     if st.button("Sign In", use_container_width=True, type="primary"):
                         if email in st.session_state.user_db:
-                            st.session_state.user = st.session_state.user_db[email]
-                            st.success("Welcome back!")
-                            st.rerun()
+                            stored_user = st.session_state.user_db[email]
+                            # Check password (simple check for now, can be hashed later)
+                            if stored_user.get("password") == password:
+                                st.session_state.user = stored_user
+                                # Ensure badges are up to date on login
+                                check_badges(st.session_state.user)
+                                st.success("Welcome back!")
+                                st.rerun()
+                            else:
+                                st.error("Incorrect password. Please try again.")
                         else:
-                            # Simple mock auth for new users in this session
-                            st.session_state.user = {
-                                "name": email.split("@")[0].capitalize(),
-                                "email": email,
-                                "profileIcon": "Stethoscope",
-                                "profileColor": "#10B981",
-                                "dailyStreak": 5,
-                                "activityCounts": {"Study Session": 12, "Bedside Report": 8, "MAR Check": 3, "Stat Page": 2},
-                                "badges": [],
-                                "points": {"Learn/Study": 120, "Drill/Quiz": 85, "Evaluate/Exam": 40, "Simulation/Case": 30}
-                            }
-                            st.session_state.user_db[email] = st.session_state.user
-                            save_users()
-                            st.rerun()
+                            st.error("User not found. Please create an account.")
                     if st.button("Create an Account", use_container_width=True):
                         st.session_state.auth_mode = "signup"
                         st.rerun()
@@ -493,19 +502,23 @@ def main():
                     st.markdown(f'Selected Color: <span style="color: {selected_color}; font-weight: bold;">{selected_color}</span>', unsafe_allow_html=True)
                     
                     if st.button("Sign Up", use_container_width=True, type="primary"):
-                        st.session_state.user = {
-                            "name": name if name else "Florence Nightingale",
-                            "email": email,
-                            "profileIcon": selected_icon,
-                            "profileColor": selected_color,
-                            "dailyStreak": 1,
-                            "activityCounts": {"Study Session": 0, "Bedside Report": 0, "MAR Check": 0, "Stat Page": 0},
-                            "badges": [],
-                            "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
-                        }
-                        st.session_state.user_db[email] = st.session_state.user
-                        save_users()
-                        st.rerun()
+                        if not email or not password:
+                            st.error("Email and Password are required.")
+                        else:
+                            st.session_state.user = {
+                                "name": name if name else "Florence Nightingale",
+                                "email": email,
+                                "password": password, # Store password
+                                "profileIcon": selected_icon,
+                                "profileColor": selected_color,
+                                "dailyStreak": 1,
+                                "activityCounts": {"Study Session": 0, "Bedside Report": 0, "MAR Check": 0, "Stat Page": 0},
+                                "badges": [],
+                                "points": {"Learn/Study": 0, "Drill/Quiz": 0, "Evaluate/Exam": 0, "Simulation/Case": 0}
+                            }
+                            st.session_state.user_db[email] = st.session_state.user
+                            save_users()
+                            st.rerun()
                     if st.button("Already have an account? Sign In", key="switch_to_login", use_container_width=True):
                         st.session_state.auth_mode = "login"
                         st.rerun()
